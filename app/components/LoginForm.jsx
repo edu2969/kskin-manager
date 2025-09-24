@@ -87,9 +87,9 @@ export default function LoginForm() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between py-8 px-6">
-      <div className="z-10 flex min-h-full flex-col justify-center py-6">
+      <div className="z-10 flex min-h-full flex-col justify-center pt-2 pb-6">
         <div className="flex flex-col sm:mx-auto sm:w-full sm:max-w-sm px-12">
-          <Image width={80} height={80} src="/logo.png" alt="KSKIN-Brand" className="mx-auto w-80 mt-6" priority={true} />
+          <Image width={80} height={80} src="/logo.png" alt="KSKIN-Brand" className="mx-auto w-80" priority={true} />
           <div className="text-xs w-68 text-right text-gray-400 text-nowrap ml-2">v0.1-beta</div>
         </div>
       </div>
