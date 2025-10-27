@@ -86,49 +86,135 @@ export default function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between py-8 px-6">
-      <div className="z-10 flex min-h-full flex-col justify-center pt-2 pb-6">
-        <div className="flex flex-col sm:mx-auto sm:w-full sm:max-w-sm px-12">
-          <Image width={80} height={80} src="/logo.png" alt="KSKIN-Brand" className="mx-auto w-80" priority={true} />
-          <div className="text-xs w-68 text-right text-gray-400 text-nowrap ml-2">v0.1-beta</div>
+    <div className="min-h-screen bg-gradient-to-br from-[#8B9B7A] via-[#9CAE8A] to-[#8B9B7A] relative overflow-hidden">
+      {/* Formas decorativas orgánicas */}
+      <div className="absolute top-0 right-0 w-64 h-64 opacity-20">
+        <div className="w-full h-full bg-gradient-to-bl from-[#D4AF8C] to-transparent rounded-full transform translate-x-32 -translate-y-32"></div>
+      </div>
+      <div className="absolute bottom-0 left-0 w-48 h-48 opacity-15">
+        <div className="w-full h-full bg-gradient-to-tr from-[#D4AF8C] to-transparent rounded-full transform -translate-x-24 translate-y-24"></div>
+      </div>
+      <div className="absolute bottom-20 right-10 w-32 h-32 opacity-10">
+        <div className="w-full h-full bg-gradient-to-tl from-[#D4AF8C] to-transparent rounded-full"></div>
+      </div>
+
+      {/* Contenido principal */}
+      <div className="flex flex-col items-center justify-center min-h-screen px-6 py-6">
+        {/* Logo superior */}
+        <div className="mb-8">          
+            <Image width={240} height={120} src="/brand-green-kskin.png" alt="KSKIN-Brand" className="h-32 w-auto filter brightness-0 invert" priority={true} />          
+        </div>
+        
+        {/* Tarjeta de login */}
+        <div className="w-full max-w-md">
+          <div className="bg-[#EFEBDD] rounded-3xl shadow-2xl p-8 relative">
+            {/* Detalle decorativo */}
+            <div className="absolute top-4 right-4 w-8 h-8 opacity-20">
+              <div className="w-full h-full bg-gradient-to-br from-[#D4AF8C] to-transparent rounded-full"></div>
+            </div>
+
+            <h3 className="text-2xl font-bold text-[#4A4A4A] text-center mb-8">
+              Inicio de Sesión
+            </h3>
+
+            <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
+              {/* Input Usuario */}
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8B9B7A]">
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  {...register("email", { required: true })}
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Usuario"
+                  className="w-full pl-12 pr-4 py-4 bg-white border border-[#DCD0BE] rounded-full text-[#4A4A4A] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#8B9B7A] focus:border-transparent transition-all"
+                  required
+                />
+                {errors.email && <p className="text-red-500 text-sm mt-1 ml-4">E-mail requerido</p>}
+              </div>
+
+              {/* Input Contraseña */}
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#8B9B7A]">
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  {...register("password", { required: true })}
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="Contraseña"
+                  className="w-full pl-12 pr-4 py-4 bg-white border border-[#DCD0BE] rounded-full text-[#4A4A4A] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#8B9B7A] focus:border-transparent transition-all"
+                  required
+                />
+                {errors.password && <p className="text-red-500 text-sm mt-1 ml-4">Contraseña requerida</p>}
+              </div>
+
+              {/* Error general */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-center text-sm flex items-center justify-center gap-2">
+                  <IoAlertCircle />
+                  {error}
+                </div>
+              )}
+
+              {/* Botón de entrada */}
+              <button
+                type="submit"
+                disabled={isLogingIn || redirecting}
+                className="w-full bg-[#8B9B7A] text-white font-bold py-4 rounded-full hover:bg-[#7A8A69] active:bg-[#6A7A59] transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {isLogingIn ? (
+                  <Loader texto="Validando" />
+                ) : redirecting ? (
+                  <Loader texto="Redirigiendo..." />
+                ) : (
+                  "Entrar"
+                )}
+              </button>
+
+              {/* Enlaces inferiores */}
+              <div className="flex justify-between items-center pt-4 text-sm">
+                <button
+                  type="button"
+                  className="text-[#8B9B7A] hover:text-[#7A8A69] transition-colors"
+                >
+                  Olvidé mi contraseña
+                </button>
+                <button
+                  type="button"
+                  className="text-[#8B9B7A] hover:text-[#7A8A69] transition-colors"
+                >
+                  ¿Necesitas ayuda?
+                </button>
+              </div>              
+            </form>
+          </div>
+        </div>
+
+        {/* Footer con logos */}
+        <div className="mt-12 flex flex-col items-center gap-6">          
+          <div className="flex items-center gap-3 opacity-60">
+            <Image width={24} height={24} src="/brand-green-kskin.png" alt="KSKIN" className="w-16 filter brightness-0 invert" />
+            <div className="text-white text-xs opacity-60">
+              Salud y Estética Integral
+            </div>
+          </div>          
+          <div className="text-white text-xs opacity-40 mt-0">
+            Derechos Reservados © 2024 Kskin
+          </div>
         </div>
       </div>
-      <form className="z-10 mt-2 w-72" onSubmit={handleSubmit(onSubmit, onError)}>
-        <div className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium leading-6">DIRECCIÓN EMAIL</label>
-            <div className="mt-2">
-              {errors.email && <p className="text-red-500">e-mail requerido</p>}
-              <input {...register("email", { required: true })}
-                id="email" name="email" type="email" autoComplete="email" required className="h-12 text-lg p-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-sm font-medium leading-6">CONTRASEÑA</label>
-              <div className="text-sm">
-                <a href="#" className="font-semibold text-sky-600 hover:text-sky-900">¿La olvidaste?</a>
-              </div>
-            </div>
-            <div className="mt-2">
-              {errors.password && <p className="text-red-500">Password requerido</p>}
-              <input {...register("password", { required: true })}
-                id="password" name="password" type="password" autoComplete="current-password"
-                required className="h-12 text-lg p-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-green-600 sm:text-sm sm:leading-6" />
-            </div>
-            {error && <div className="flex text-red-500">
-              <IoAlertCircle className="mr-1 mt-2" /><span className="mt-0.5">{error}</span>
-            </div>}
-          </div>
-          <div>
-            <button type="submit" onSubmit={handleSubmit(onSubmit)} disabled={isLogingIn}
-              className="w-full rounded-md bg-rose-400 px-3 py-2 text-lg font-semibold text-white shadow-sm hover:bg-rose-500 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-rose-600 h-12">
-                {isLogingIn ? <Loader texto="Validando"/> : redirecting ? <Loader texto="Redirigiendo..."/> : "Entrar"}
-            </button>
-          </div>
-        </div>
-      </form>
+      {/* Debug info */}
       <div style={{
         position: "absolute",
         top: 72,
@@ -142,6 +228,6 @@ export default function LoginForm() {
       }}>
         {resolution.width} x {resolution.height}
       </div>
-    </main>
+    </div>
   );
 }
