@@ -13,6 +13,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import { FaCaretSquareRight } from "react-icons/fa";
+import { FaRegTrashCan } from "react-icons/fa6";
 import { socket } from "@/lib/socket-client";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
@@ -128,12 +129,18 @@ export default function Ficha({ pacienteId }) {
             return TABS_OTROS; // Default para usuarios sin especialidad
         }
         
-        // Verificar si alguna especialidad es "Medico"
-        const esMedico = profesional.especialidadIds.some(esp => 
-            esp.nombre && esp.nombre.toLowerCase() === 'medico'
+        // Verificar si alguna especialidad es "Medicina" (mismo criterio que esMedico())
+        const esMedicoTab = profesional.especialidadIds.some(esp => 
+            esp.nombre && esp.nombre.toLowerCase() === 'medicina'
         );
         
-        return esMedico ? TABS_MEDICO : TABS_OTROS;
+        console.log("🏥 TABS SEGÚN ESPECIALIDAD:", { 
+            especialidades: profesional.especialidadIds.map(e => e.nombre), 
+            esMedicoTab, 
+            tabsResultado: esMedicoTab ? 'TABS_MEDICO' : 'TABS_OTROS' 
+        });
+        
+        return esMedicoTab ? TABS_MEDICO : TABS_OTROS;
     };
 
     // Función para verificar si es médico (NO debe mostrar secciones médicas en info personal)
@@ -141,9 +148,9 @@ export default function Ficha({ pacienteId }) {
         if (!profesional || !profesional.especialidadIds || profesional.especialidadIds.length === 0) {
             return false;
         }
-        
+        console.log("ES MEDICO?", profesional.especialidadIds, profesional.especialidadIds.some(esp => esp.nombre && esp.nombre.toLowerCase() === 'medicina'));
         return profesional.especialidadIds.some(esp => 
-            esp.nombre && esp.nombre.toLowerCase() === 'medico'
+            esp.nombre && esp.nombre.toLowerCase() === 'medicina'
         );
     };
 
@@ -516,10 +523,11 @@ export default function Ficha({ pacienteId }) {
         }
     };
 
-    const guardarMedicamentosManuales = () => {
-        if (puedeGuardarAutomaticamente() && medicamentos.length > 0) {
-            console.log("💾 Guardando medicamentos MANUALMENTE");
-            guardarAtributo("medicamentoIds", medicamentos);
+    const guardarMedicamentosManuales = (medicamentosArray = null) => {
+        const medicamentosAGuardar = medicamentosArray || medicamentos;
+        if (puedeGuardarAutomaticamente()) {
+            console.log("💾 Guardando medicamentos MANUALMENTE", medicamentosAGuardar);
+            guardarAtributo("medicamentoIds", medicamentosAGuardar);
         }
     };
 
@@ -851,7 +859,21 @@ export default function Ficha({ pacienteId }) {
                                                     <div className="space-y-2">
                                                         {medicamentos.map((med, index) => (
                                                             <div key={index} className="bg-[#fad379]/20 border border-[#fad379] rounded p-3">
-                                                                <div className="font-medium text-[#68563c] mb-2">{med.nombre}</div>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <div className="font-medium text-[#68563c]">{med.nombre}</div>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const nuevos = medicamentos.filter((_, i) => i !== index);
+                                                                            setMedicamentos(nuevos);
+                                                                            // Guardado automático después de eliminar con el arreglo actualizado
+                                                                            setTimeout(() => guardarMedicamentosManuales(nuevos), 100);
+                                                                        }}
+                                                                        className="text-[#8e9b6d] hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-colors"
+                                                                        title="Eliminar medicamento"
+                                                                    >
+                                                                        <FaRegTrashCan size={14} />
+                                                                    </button>
+                                                                </div>
                                                                 <div className="grid grid-cols-2 gap-4">
                                                                     <div>
                                                                         <label className="text-xs text-[#8e9b6d]">Unidades por dosis</label>
@@ -1388,7 +1410,7 @@ export default function Ficha({ pacienteId }) {
                                     border border-[#d5c7aa] border-l-0
                                     ${isActive
                                         ? "text-[#68563c] bg-[#f6eedb] border-l-0"
-                                        : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white border-l-2 border-l-[#d5c7aa] hover:border-l-[#ac9164] hover:border-[#ac9164]"
+                                        : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white border-l-2 border-l-[#d5c7aa] hover:border-l-[#ac9164] hover:border-[#ac9164] cursor-pointer"
                                     }
                                     text-left transition-all duration-200
                                 `}

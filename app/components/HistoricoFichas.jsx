@@ -414,6 +414,75 @@ export default function HistoricoFichas({
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Información de Higiene */}
+                                {fichaSeleccionada.paciente.higiene && Object.values(fichaSeleccionada.paciente.higiene).some(value => value !== null && value !== undefined && value !== "" && value !== 0 && value !== false) && (
+                                    <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
+                                        <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+                                            🌿 Hábitos e Higiene
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                            {fichaSeleccionada.paciente.higiene.fuma && (
+                                                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                                    <p className="font-semibold text-red-700 flex items-center gap-2">
+                                                        🚬 Tabaquismo
+                                                    </p>
+                                                    <p className="text-red-600">
+                                                        Fuma {fichaSeleccionada.paciente.higiene.cigarrillosPorDia || 'cantidad no especificada'} cigarrillos por día
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {fichaSeleccionada.paciente.higiene.agua > 0 && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <p className="font-semibold text-blue-700 flex items-center gap-2">
+                                                        💧 Hidratación
+                                                    </p>
+                                                    <p className="text-blue-600">{fichaSeleccionada.paciente.higiene.agua} ml por día</p>
+                                                </div>
+                                            )}
+                                            {fichaSeleccionada.paciente.higiene.ejercicioSemanal > 0 && (
+                                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                                    <p className="font-semibold text-orange-700 flex items-center gap-2">
+                                                        🏃‍♂️ Ejercicio
+                                                    </p>
+                                                    <p className="text-orange-600">{fichaSeleccionada.paciente.higiene.ejercicioSemanal} horas por semana</p>
+                                                </div>
+                                            )}
+                                            {fichaSeleccionada.paciente.higiene.nivelStress !== null && fichaSeleccionada.paciente.higiene.nivelStress !== undefined && (
+                                                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                                    <p className="font-semibold text-purple-700 flex items-center gap-2">
+                                                        Nivel de Estrés
+                                                    </p>
+                                                    <p className="text-purple-600">
+                                                        {fichaSeleccionada.paciente.higiene.nivelStress === 0 && '😌 Bajo'}
+                                                        {fichaSeleccionada.paciente.higiene.nivelStress === 1 && '😐 Medio'}
+                                                        {fichaSeleccionada.paciente.higiene.nivelStress === 2 && '😰 Alto'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {fichaSeleccionada.paciente.higiene.calidadDormir !== null && fichaSeleccionada.paciente.higiene.calidadDormir !== undefined && (
+                                                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                                                    <p className="font-semibold text-indigo-700 flex items-center gap-2">
+                                                        Calidad del Sueño
+                                                    </p>
+                                                    <p className="text-indigo-600">
+                                                        {fichaSeleccionada.paciente.higiene.calidadDormir === 0 && '😴 Bueno'}
+                                                        {fichaSeleccionada.paciente.higiene.calidadDormir === 1 && '😪 Regular'}
+                                                        {fichaSeleccionada.paciente.higiene.calidadDormir === 2 && '😵 Malo'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {fichaSeleccionada.paciente.higiene.habitoAlimenticio && (
+                                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:col-span-2">
+                                                    <p className="font-semibold text-yellow-700 flex items-center gap-2 mb-2">
+                                                        🍎 Hábitos Alimenticios
+                                                    </p>
+                                                    <p className="text-yellow-600 whitespace-pre-wrap">{fichaSeleccionada.paciente.higiene.habitoAlimenticio}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

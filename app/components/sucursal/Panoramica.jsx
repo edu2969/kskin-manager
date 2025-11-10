@@ -34,6 +34,7 @@ export default function Panoramica({ session }) {
     const [loading, setLoading] = useState(true);
     const [searching, setSearching] = useState(false);
     const [registrandoArribo, setRegistrandoArribo] = useState(false);
+    const [confirmandoAsignacion, setConfirmandoAsignacion] = useState(false);
     const router = useRouter();
 
     const registrarArribo = async (paciente) => {
@@ -115,6 +116,8 @@ export default function Panoramica({ session }) {
             }
         }
 
+        setConfirmandoAsignacion(true);
+
         fetch("/api/profesional/asignacion", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -138,6 +141,9 @@ export default function Panoramica({ session }) {
             .catch((err) => {
                 toast.error("Error de red al asignar box");
                 console.log("ERROR /api/profesional/asignacion", err);
+            })
+            .finally(() => {
+                setConfirmandoAsignacion(false);
             });
 
         // Asignar paciente al box
@@ -497,14 +503,16 @@ export default function Panoramica({ session }) {
                     </div>
                     <div className="flex gap-2 mt-6">
                         <button
-                            className="flex-1 rounded-md bg-green-300 hover:bg-green-400 text-white font-semibold py-2 transition"
+                            className="flex-1 rounded-md bg-green-300 hover:bg-green-400 text-white font-semibold py-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={confirmarAsignacion}
+                            disabled={confirmandoAsignacion}
                         >
-                            Confirmar
+                            {confirmandoAsignacion ? <Loader texto="Confirmando..." /> : "Confirmar"}
                         </button>
                         <button
-                            className="flex-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 transition"
+                            className="flex-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 transition disabled:opacity-50"
                             onClick={() => setModal({ open: false, paciente: null, box: null })}
+                            disabled={confirmandoAsignacion}
                         >
                             Cancelar
                         </button>

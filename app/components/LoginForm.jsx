@@ -170,7 +170,7 @@ export default function LoginForm() {
               <button
                 type="submit"
                 disabled={isLogingIn || redirecting}
-                className="w-full bg-[#8B9B7A] text-white font-bold py-4 rounded-full hover:bg-[#7A8A69] active:bg-[#6A7A59] transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="h-16 w-full bg-[#8B9B7A] text-white font-bold py-4 rounded-full hover:bg-[#7A8A69] active:bg-[#6A7A59] transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {isLogingIn ? (
                   <Loader texto="Validando" />
