@@ -6,8 +6,11 @@ const medicamentoSchema = new Schema({
         type: String, 
         required: true, 
         unique: true, 
-        index: true 
+        index: true,
+        trim: true
     },
+    unidades: { type: String, required: false },
+    frecuencia: { type: Number, required: false }
 }, { 
     timestamps: true 
 });

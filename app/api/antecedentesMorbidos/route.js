@@ -1,6 +1,6 @@
 import { connectMongoDB } from "@/lib/mongodb";
 import { NextResponse } from "next/server";
-import AntecedenteMoribido from "@/models/antecedentesMorbido";
+import AntecedenteMorbido from "@/models/antecedenteMorbido";
 import User from "@/models/user";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
@@ -33,16 +33,16 @@ import { authOptions } from "@/app/utils/authOptions";
  *   ]
  * }
  */
-export async function GET(req) {
+export async function GET() {
     await connectMongoDB();
 
     try {
-        const antecedentesMorbidos = await AntecedenteMoribido.find({}).lean();
+        const antecedentesMorbidos = await AntecedenteMorbido.find({}).lean();
         
         return NextResponse.json({
             antecedentes: antecedentesMorbidos
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Error al obtener antecedentes mórbidos" }, { status: 500 });
     }
 }
@@ -100,7 +100,7 @@ export async function POST(req) {
         }
 
         // Check if antecedente mórbido already exists
-        const existingAntecedente = await AntecedenteMoribido.findOne({ 
+        const existingAntecedente = await AntecedenteMorbido.findOne({ 
             nombre: { $regex: new RegExp(`^${nombre.trim()}$`, 'i') } 
         });
 
@@ -108,7 +108,7 @@ export async function POST(req) {
             return NextResponse.json({ error: "El antecedente mórbido ya existe" }, { status: 409 });
         }
 
-        const antecedenteMorbido = await AntecedenteMoribido.create({
+        const antecedenteMorbido = await AntecedenteMorbido.create({
             nombre: nombre.trim()
         });
 
@@ -116,7 +116,7 @@ export async function POST(req) {
             antecedenteMorbido
         }, { status: 201 });
 
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Error al crear antecedente mórbido" }, { status: 500 });
     }
 }

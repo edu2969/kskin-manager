@@ -56,25 +56,46 @@ export async function POST(req) {
     });
     console.log("[actualizarFicha] Ficha encontrada:", ficha ? ficha._id : "No ficha");
 
-    // Si el atributo existe en ficha, actualizar ficha
-    if (ficha && ficha.schema.path(atributo)) {
-        ficha[atributo] = valor;
-        await ficha.save();
-        console.log(`[actualizarFicha] Atributo '${atributo}' actualizado en ficha ${ficha._id}`);
+    // Manejo simplificado - solo actualización directa sin historial individual
+    // El historial completo se crea al finalizar la consulta
+    try {
+        // Determinar si el atributo pertenece a la ficha o al paciente
+        if (['anamnesis', 'indicaciones', 'solicitudExamenes', 'recetas'].includes(atributo)) {
+            // Atributos de la ficha
+            if (!ficha) {
+                // Crear ficha si no existe
+                ficha = await Ficha.create({
+                    pacienteId,
+                    profesionalId: profesional._id,
+                    [atributo]: valor
+                });
+                console.log(`[actualizarFicha] Nueva ficha creada con ${atributo}`);
+            } else {
+                // Actualizar ficha existente
+                await Ficha.findByIdAndUpdate(
+                    ficha._id,
+                    { [atributo]: valor },
+                    { new: true }
+                );
+                console.log(`[actualizarFicha] Ficha actualizada: ${atributo}`);
+            }
+        } else {
+            // Atributos del paciente
+            await Paciente.findByIdAndUpdate(
+                pacienteId,
+                { [atributo]: valor },
+                { new: true }
+            );
+            console.log(`[actualizarFicha] Paciente actualizado: ${atributo}`);
+        }
+
         return NextResponse.json({ ok: true });
+    } catch (error) {
+        console.error("[actualizarFicha] Error procesando actualización:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    // Si el atributo existe en paciente, actualizar paciente
-    const paciente = await Paciente.findOne({ _id: pacienteId });
-    console.log("[actualizarFicha] Paciente encontrado:", paciente ? paciente._id : "No paciente");
-
-    if (paciente && paciente.schema.path(atributo)) {
-        paciente[atributo] = valor;
-        await paciente.save();
-        console.log(`[actualizarFicha] Atributo '${atributo}' actualizado en paciente ${paciente._id}`);
-        return NextResponse.json({ ok: true });
-    }
-
-    console.warn("[actualizarFicha] Atributo no encontrado en ficha ni paciente:", atributo);
-    return NextResponse.json({ error: "Atributo no encontrado en ficha ni paciente" }, { status: 400 });
 }
+
+// FUNCIONES AUXILIARES REMOVIDAS: 
+// El nuevo modelo ya no registra cambios individuales.
+// Todo el historial se guarda como snapshot completo al finalizar la consulta.

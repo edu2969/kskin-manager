@@ -19,6 +19,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from "next/navigation";
 import Loader from "../Loader";
 import { LuDoorClosed, LuDoorOpen, LuSearch } from "react-icons/lu";
+import { signOut } from 'next-auth/react';
 
 export default function Panoramica({ session }) {
     const [nuevoPacienteModal, setNuevoPacienteModal] = useState(false);
@@ -190,6 +191,7 @@ export default function Panoramica({ session }) {
         const data = await response.json();
         setArribos(data.arribos || []);
         setBoxes(data.boxes || []);
+        console.log("ARRIBOS", data.arribos);
         console.log("BOXES", data.boxes);
         setLoading(false);
     };
@@ -284,17 +286,19 @@ export default function Panoramica({ session }) {
     });
 
     const boxLibre = (box) => {
-        // Si no tiene paciente asignado, está libre
+        // 1. Sin paciente o profesional → LIBRE
         if (!box.pacienteId || !box.profesionalId) return true;
 
-        // Si no tiene inicio de atención, está libre
+        // 2. ✅ NUEVO: Tiene terminoAtencion → LIBRE (atención completada)
+        if (box.terminoAtencion) return true;
+
+        // 3. Sin inicio de atención → LIBRE  
         if (!box.inicioAtencion) return true;
 
-        // Calcular si el tiempo estimado ya se cumplió
+        // 4. Tiempo estimado cumplido → LIBRE
         const inicioTime = new Date(box.inicioAtencion).getTime();
-        const tiempoEstimado = box.ocupacion?.tiempoEstimado || 60; // minutos
-        const finEstimado = inicioTime + (tiempoEstimado * 60 * 1000); // convertir a milisegundos
-
+        const tiempoEstimado = box.ocupacion?.tiempoEstimado || 60;
+        const finEstimado = inicioTime + (tiempoEstimado * 60 * 1000);
         return Date.now() > finEstimado;
     }
 
@@ -312,7 +316,7 @@ export default function Panoramica({ session }) {
                             {arribos.length} / 20
                         </span>
                     </div>
-                    {arribos.length > 0 && role === USER_ROLE.profesional && <div className="flex rounded p-2 text-gray-400 bg-gray-100 mb-2">
+                    {arribos.filter(a => a.fechaLlegada).length > 0 && role === USER_ROLE.profesional && <div className="flex rounded p-2 text-gray-400 bg-gray-100 mb-2">
                         <RiDragDropLine size="4rem" />
                         <span className="px-2 text-sm">Toma al paciente y arrastralo hacia el box en dónde lo atenderás.</span>
                     </div>}
@@ -327,10 +331,10 @@ export default function Panoramica({ session }) {
                         + Recibir paciente
                     </button>}
                     <div className="flex flex-col gap-2 overflow-y-auto">
-                        {!loading && arribos.length === 0 && (
+                        {!loading && arribos.filter(a => a.fechaLlegada).length === 0 && (
                             <div className="text-center text-gray-400 mt-8">Sin pacientes en espera</div>
                         )}
-                        {arribos.map((arribo, idx) => (
+                        {arribos.filter(a => a.fechaLlegada).map((arribo, idx) => (
                             <div
                                 key={`paciente-${idx}`}
                                 className={`flex items-center gap-2 rounded-lg px-3 py-2 shadow-sm cursor-grab active:cursor-grabbing transition-all border border-pink-200 bg-white hover:bg-pink-50`}
@@ -673,8 +677,11 @@ export default function Panoramica({ session }) {
             <button
                 className="fixed bottom-6 right-6 z-50 bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center"
                 title="CiPower"
-                onClick={() => { }}
-            >
+                onClick={async () => {
+                    signOut({ redirect: false }).then(() => {
+                        router.push('/logingOut');
+                    });
+                }}>
                 {/* SVG CiPower logo (placeholder) */}
                 <CiPower className="text-3xl text-[#68563c]" />
             </button>

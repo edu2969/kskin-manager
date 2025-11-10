@@ -35,6 +35,7 @@ export async function GET(req) {
 
     const profesional = await Profesional.findOne({ userId: session.user.id })
         .populate({ path: "userId", select: "email name" })
+        .populate({ path: "especialidadIds", select: "nombre" })
         .lean();
 
     let ficha = await Ficha.findOne({ 

@@ -2,10 +2,12 @@ import { connectMongoDB } from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import Paciente from "@/models/paciente";
 import Arribo from "@/models/arribo";
+import Ficha from "@/models/ficha";
 import User from "@/models/user";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
 import { USER_ROLE } from "@/app/utils/constants";
+import { crearSnapshotPaciente } from "@/app/api/paciente/crearSnapshot/route";
 
 // Registrando arribo
 export async function POST(req) {
@@ -56,5 +58,37 @@ export async function POST(req) {
     const nuevoArribo = await Arribo.create(arriboData);
     console.log("[POST] /api/recepcion - Nuevo arribo creado:", nuevoArribo);
 
-    return NextResponse.json({ arribo: nuevoArribo });
+    // Crear ficha inicial sin profesional asignado
+    const nuevaFicha = await Ficha.create({
+        pacienteId: pacienteId,
+        profesionalId: null, // Sin profesional asignado inicialmente
+        estadoConsulta: "PENDIENTE",
+        motivoConsulta: "Consulta general", // Valor por defecto
+        // Otros campos opcionales se inicializan como null/vacío
+    });
+    console.log("[POST] /api/recepcion - Nueva ficha creada:", nuevaFicha._id);
+
+    // Crear snapshot inicial del paciente
+    try {
+        await crearSnapshotPaciente(
+            pacienteId, 
+            user._id, 
+            null, // Sin profesional
+            nuevaFicha._id, 
+            'REGISTRO_INICIAL',
+            `Paciente registrado en recepción el ${new Date().toLocaleDateString('es-CL')} a las ${new Date().toLocaleTimeString('es-CL')}`
+        );
+        console.log("[POST] /api/recepcion - Snapshot inicial creado");
+    } catch (error) {
+        console.warn("[POST] /api/recepcion - Error creando snapshot inicial:", error.message);
+        // No fallar la operación por el snapshot
+    }
+
+    return NextResponse.json({ 
+        arribo: nuevoArribo,
+        ficha: {
+            _id: nuevaFicha._id,
+            estadoConsulta: nuevaFicha.estadoConsulta
+        }
+    });
 }

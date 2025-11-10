@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
 import { USER_ROLE } from "@/app/utils/constants";
 
-export async function GET(req) {
+export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user || !session.user.id) {

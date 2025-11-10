@@ -44,7 +44,7 @@ const pacienteSchema = new Schema({
     alergias: [{ type: String }],
     antecedenteMorbidoIds: [{
         type: Object,
-        ref: "AntecedenteMoribido"
+        ref: "AntecedenteMorbido"
     }],
     medicamentoIds: [{
         type: Object,

@@ -11,7 +11,8 @@ const examSchema = new Schema({
         type: String, 
         required: true, 
         unique: true, 
-        index: true 
+        index: true,
+        trim: true
     },
     sub: [subExamSchema]
 }, { 

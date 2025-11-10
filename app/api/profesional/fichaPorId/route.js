@@ -22,7 +22,7 @@ import { authOptions } from "@/app/utils/authOptions";
  * @returns {Object} response.body - Response body
  * @returns {Object} response.body.ficha - The Ficha document
  * @returns {Object} response.body.paciente - The associated patient details
- * @returns {Object} response.body.profesional - The associated professional details
+ * @returns {Object} response.body.profesional - The associated professional details with specialties
  * @returns {string} response.body.error - Error message if operation fails
  * @throws {401} Unauthorized - When user is not authenticated
  * @throws {400} Bad Request - When required fields are missing
@@ -34,7 +34,11 @@ import { authOptions } from "@/app/utils/authOptions";
  * {    
  *  "ficha": { ... },
  *  "paciente": { ... },
- * "profesional": { ... }
+ *  "profesional": { 
+ *    "userId": { "email": "...", "name": "..." },
+ *    "especialidadIds": [{ "nombre": "Cardiología", "activo": true }],
+ *    ...
+ *  }
  * }
  *  */
 export async function GET(req) {
@@ -62,9 +66,14 @@ export async function GET(req) {
         return NextResponse.json({ error: "Ficha no encontrada" }, { status: 404 });
     }
 
-    // Poblar datos del profesional
+    // Poblar datos del profesional con especialidades
     const profesional = await Profesional.findById(ficha.profesionalId)
         .populate({ path: "userId", select: "email name" })
+        .populate({ 
+            path: "especialidadIds", 
+            select: "nombre activo",
+            match: { activo: true } // Solo especialidades activas
+        })
         .lean();
 
     // Poblar datos del paciente

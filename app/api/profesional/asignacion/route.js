@@ -15,7 +15,8 @@ import Profesional from "@/models/profesional";
  * This endpoint handles the assignment process by:
  * - Validating professional authentication and authorization
  * - Updating box occupation status with estimated time
- * - Creating a new medical record (Ficha)
+ * - Getting or creating a medical record (Ficha) for the current day
+ * - If no daily record exists, copies the most recent one (excluding exams, prescriptions, indications)
  * - Updating patient arrival record with attention details
  * 
  * @async
@@ -109,16 +110,83 @@ export async function POST(req) {
 
     await box.save();
 
-    await Ficha.create({
+    // Buscar ficha del día actual para este paciente (debería existir desde recepción)
+    const inicioDelDia = new Date();
+    inicioDelDia.setHours(0, 0, 0, 0);
+    const finDelDia = new Date();
+    finDelDia.setHours(23, 59, 59, 999);
+    
+    let fichaDelDia = await Ficha.findOne({
         pacienteId: pacienteId,
-        profesionalId: profesional._id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: {
+            $gte: inicioDelDia,
+            $lte: finDelDia
+        }
     });
+    
+    if (fichaDelDia) {
+        // CASO NORMAL: Ya existe ficha del día (creada en recepción)
+        // Solo completar con profesional y cambiar estado
+        console.log("[asignacion] Completando ficha existente:", fichaDelDia._id);
+        
+        fichaDelDia.profesionalId = profesional._id;
+        fichaDelDia.estadoConsulta = "EN_CURSO";
+        fichaDelDia.horaInicio = new Date();
+        fichaDelDia.updatedAt = new Date();
+        
+        // Copiar datos de la ficha más reciente si la actual está vacía
+        if (!fichaDelDia.anamnesis) {
+            const fichaReciente = await Ficha.findOne({
+                pacienteId: pacienteId,
+                _id: { $ne: fichaDelDia._id } // Excluir la ficha actual
+            }).sort({ createdAt: -1 });
+            
+            if (fichaReciente) {
+                console.log("[asignacion] Copiando datos de ficha reciente");
+                fichaDelDia.anamnesis = fichaReciente.anamnesis;
+                fichaDelDia.examenFisico = fichaReciente.examenFisico;
+                fichaDelDia.diagnostico = fichaReciente.diagnostico;
+                fichaDelDia.planTratamiento = fichaReciente.planTratamiento;
+                fichaDelDia.observaciones = fichaReciente.observaciones;
+                // No copiar: solicitudExamenes, indicaciones, recetas (son específicos de cada consulta)
+            }
+        }
+        
+        await fichaDelDia.save();
+        
+    } else {
+        // CASO EXCEPCIONAL: No hay ficha del día (recepción no la creó)
+        console.warn("[asignacion] No se encontró ficha del día, creando nueva");
+        
+        // Buscar la ficha más reciente para copiar datos básicos
+        const fichaReciente = await Ficha.findOne({
+            pacienteId: pacienteId
+        }).sort({ createdAt: -1 });
+        
+        // Crear nueva ficha con datos de la más reciente (si existe)
+        fichaDelDia = await Ficha.create({
+            pacienteId: pacienteId,
+            profesionalId: profesional._id,
+            estadoConsulta: "EN_CURSO",
+            horaInicio: new Date(),
+            // Copiar solo datos básicos de ficha anterior
+            anamnesis: fichaReciente?.anamnesis || "",
+            examenFisico: fichaReciente?.examenFisico || "",
+            diagnostico: fichaReciente?.diagnostico || "",
+            planTratamiento: fichaReciente?.planTratamiento || "",
+            observaciones: fichaReciente?.observaciones || "",
+            // Campos nuevos vacíos
+            solicitudExamenes: [],
+            indicaciones: "",
+            recetas: []
+        });
+        
+        console.log("[asignacion] Nueva ficha creada:", fichaDelDia._id);
+    }
 
     const arriboActual = await Arribo.findOne({
         pacienteId: pacienteId,
-        fechaAtencion: { $exists: false }
+        fechaAtencion: null
     }).sort({ fechaLlegada: -1 });
 
     if (arriboActual) {
@@ -126,6 +194,8 @@ export async function POST(req) {
         arriboActual.fechaAtencion = new Date();
         arriboActual.updatedAt = new Date();
         await arriboActual.save();
+    } else {
+        return NextResponse.json({ error: "Arribo del paciente no encontrado" }, { status: 404 });
     }
 
     return NextResponse.json({ ok: true, box });

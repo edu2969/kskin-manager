@@ -12,7 +12,7 @@ const profesionalSchema = new Schema(
                 fecha: { type: Date, default: Date.now }
             }
         ],
-        specialtyIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Specialty" }],
+        especialidadIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Especialidad" }],
         createdAt: { type: Date, default: Date.now },
         updatedAt: { type: Date, default: Date.now }
     },

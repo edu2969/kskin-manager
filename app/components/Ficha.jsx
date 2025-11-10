@@ -1,27 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogTitle } from "@headlessui/react";
 import { LiaTimesSolid } from "react-icons/lia";
 import { CiPower } from "react-icons/ci";
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from 'react-toastify';
 import Loader from "./Loader";
+import HistoricoFichas from "./HistoricoFichas";
 import 'react-toastify/dist/ReactToastify.css';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import { FaCaretSquareRight } from "react-icons/fa";
+import { socket } from "@/lib/socket-client";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 
-const TABS = [
+const TABS_MEDICO = [
     { key: "personal", label: "Información personal", color: "pink" },
     { key: "anamnesis", label: "Anamnesis / Exámen Físico", color: "purple" },
     { key: "examenes", label: "Exámenes", color: "purple" },
     { key: "indicaciones", label: "Indicaciones", color: "sky" },
     { key: "receta", label: "Receta", color: "green" },
     { key: "licencias", label: "Licencias", color: "purple" },
+];
+
+const TABS_OTROS = [
+    { key: "personal", label: "Información personal", color: "pink" },
+    { key: "indicaciones", label: "Indicaciones", color: "sky" },
 ];
 
 function flattenExamenes(examenes) {
@@ -49,6 +56,13 @@ export default function Ficha({ pacienteId }) {
     });
     const [profesional, setProfesional] = useState(null);
     const [guardando, setGuardando] = useState(false);
+    const [fichaCompleta, setFichaCompleta] = useState(false); // Flag para controlar carga inicial
+    
+    // Flag específico para permitir guardado automático (solo después de carga completa)
+    const [permitirGuardadoAutomatico, setPermitirGuardadoAutomatico] = useState(false);
+    
+    // Ref para bloquear completamente las llamadas durante carga inicial
+    const bloqueandoCarga = useRef(true);
 
     // Campos editables
     const [anamnesis, setAnamnesis] = useState("");
@@ -62,8 +76,7 @@ export default function Ficha({ pacienteId }) {
     const [recetas, setRecetas] = useState([]);
     const [historico, setHistorico] = useState([]);
     const [loadingHistorico, setLoadingHistorico] = useState(false);
-    const [fichaInspeccionada, setFichaInspeccionada] = useState(null);
-    const [loadingFicha, setLoadingFicha] = useState(false);
+    const [loadingFichaInicial, setLoadingFichaInicial] = useState(true); // Para la carga inicial completa
     
     // Estados para antecedentes mórbidos y medicamentos desde API
     const [antecedentesMorbidos, setAntecedentesMorbidos] = useState([]);
@@ -83,27 +96,68 @@ export default function Ficha({ pacienteId }) {
     }]);
     const [otroAnticonceptivo, setOtroAnticonceptivo] = useState("");
     const [partos, setPartos] = useState([]);
+    const [habitoAlimenticioLocal, setHabitoAlimenticioLocal] = useState("");
+    const [aguaCm3DiaLocal, setAguaCm3DiaLocal] = useState(0);
+    const [ejercicioHrsSemanaLocal, setEjercicioHrsSemanaLocal] = useState(0);
+    const [cigarrillosPorDiaLocal, setCigarrillosPorDiaLocal] = useState(0);
     const [higiene, setHigiene] = useState({
         fuma: false,
-        cigarrillosPorDia: 0,
         agua: 0,
-        aguaCm3Dia: 0,
         ejercicioSemanal: 0,
-        ejercicioHrsSemana: 0,
-        nivelStress: "",
-        nivelSueno: "",
+        nivelStress: 0,
         calidadDormir: 0,
         habitoAlimenticio: ""
     });
     
     const [modalHistorico, setModalHistorico] = useState(false);
-    const [modalFicha, setModalFicha] = useState(false);
+    const [modalAlergias, setModalAlergias] = useState(false);
     const [finishing, setFinishing] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
+    const [modalConfirmacion, setModalConfirmacion] = useState(false);
     const router = useRouter();
+
+    // Función para verificar si las alergias están vacías
+    const estaAlergiaVacia = () => {
+        const alergias = paciente?.alergias;
+        return !alergias || alergias.length === 0 || alergias.every(alergia => !alergia.trim());
+    };
+
+    // Función para determinar qué tabs mostrar según especialidad
+    const getTabsSegunEspecialidad = () => {
+        if (!profesional || !profesional.especialidadIds || profesional.especialidadIds.length === 0) {
+            return TABS_OTROS; // Default para usuarios sin especialidad
+        }
+        
+        // Verificar si alguna especialidad es "Medico"
+        const esMedico = profesional.especialidadIds.some(esp => 
+            esp.nombre && esp.nombre.toLowerCase() === 'medico'
+        );
+        
+        return esMedico ? TABS_MEDICO : TABS_OTROS;
+    };
+
+    // Función para verificar si es médico (NO debe mostrar secciones médicas en info personal)
+    const esMedico = () => {
+        if (!profesional || !profesional.especialidadIds || profesional.especialidadIds.length === 0) {
+            return false;
+        }
+        
+        return profesional.especialidadIds.some(esp => 
+            esp.nombre && esp.nombre.toLowerCase() === 'medico'
+        );
+    };
 
     // Fetch ficha
     useEffect(() => {
         if (!pacienteId) return;
+        
+        // Resetear flags al cambiar de paciente
+        setFichaCompleta(false);
+        setLoadingFichaInicial(true); // Iniciar carga inicial
+        setPermitirGuardadoAutomatico(false); // Bloquear guardado automático durante carga
+        bloqueandoCarga.current = true; // BLOQUEO TOTAL durante carga
+        
+        console.log("🔴 CARGA INICIAL - Bloqueo total activado");
         
         const cargarDatos = async () => {
             try {
@@ -123,16 +177,18 @@ export default function Ficha({ pacienteId }) {
                 if (fichaData.paciente?.higiene) {
                     setHigiene({
                         fuma: fichaData.paciente.higiene.fuma || false,
-                        cigarrillosPorDia: fichaData.paciente.higiene.cigarrillosPorDia || 0,
                         agua: fichaData.paciente.higiene.agua || 0,
-                        aguaCm3Dia: fichaData.paciente.higiene.aguaCm3Dia || 0,
                         ejercicioSemanal: fichaData.paciente.higiene.ejercicioSemanal || 0,
-                        ejercicioHrsSemana: fichaData.paciente.higiene.ejercicioHrsSemana || 0,
-                        nivelStress: fichaData.paciente.higiene.nivelStress || "",
-                        nivelSueno: fichaData.paciente.higiene.nivelSueno || "",
+                        nivelStress: fichaData.paciente.higiene.nivelStress || 0,
                         calidadDormir: fichaData.paciente.higiene.calidadDormir || 0,
                         habitoAlimenticio: fichaData.paciente.higiene.habitoAlimenticio || ""
                     });
+                    
+                    // Inicializar estados locales para campos que usan onBlur
+                    setHabitoAlimenticioLocal(fichaData.paciente.higiene.habitoAlimenticio || "");
+                    setAguaCm3DiaLocal(fichaData.paciente.higiene.aguaCm3Dia || 0);
+                    setEjercicioHrsSemanaLocal(fichaData.paciente.higiene.ejercicioHrsSemana || 0);
+                    setCigarrillosPorDiaLocal(fichaData.paciente.higiene.cigarrillosPorDia || 0);
                 }
                 
                 // Cargar lista de antecedentes mórbidos disponibles
@@ -198,10 +254,14 @@ export default function Ficha({ pacienteId }) {
                 const medicamentosData = await medicamentosRes.json();
                 
                 if (medicamentosData.medicamentos) {
-                    // Los medicamentos del paciente ya tienen formato completo con unidades y frecuencia
-                    // Solo cargamos los medicamentos del paciente si existen
+                    // Los medicamentos del paciente necesitan tener unidades y frecuencia inicializados
                     if (fichaData.paciente?.medicamentoIds) {
-                        setMedicamentos(fichaData.paciente.medicamentoIds);
+                        const medicamentosConDefaults = fichaData.paciente.medicamentoIds.map(med => ({
+                            ...med,
+                            unidades: med.unidades || 1,
+                            frecuencia: med.frecuencia || 8
+                        }));
+                        setMedicamentos(medicamentosConDefaults);
                     }
                     
                     // Guardamos la lista completa para autocompletado
@@ -222,13 +282,46 @@ export default function Ficha({ pacienteId }) {
                     setExamenesFlatted(examenesFlat);
                 }
                 
+                // Verificar si las alergias están vacías y mostrar alerta
+                const alergias = fichaData.paciente?.alergias;
+                const tieneAlergias = alergias && alergias.length > 0 && alergias.some(alergia => alergia.trim() !== '');
+                if (!tieneAlergias) {
+                    // Mostrar modal después de un pequeño delay para que se cargue la interfaz
+                    setTimeout(() => {
+                        setModalAlergias(true);
+                    }, 500);
+                }
+                
             } catch (error) {
                 console.error('Error cargando datos:', error);
+            } finally {
+                // Marcar que la ficha está completamente cargada
+                setTimeout(() => {
+                    setFichaCompleta(true);
+                    setLoadingFichaInicial(false); // Terminar carga inicial
+                    
+                    // IMPORTANTE: Desbloquear guardado automático solo después de un delay adicional
+                    // para asegurar que todos los states se hayan establecido
+                    setTimeout(() => {
+                        bloqueandoCarga.current = false; // DESBLOQUEO TOTAL
+                        setPermitirGuardadoAutomatico(true);
+                        console.log("🟢 BLOQUEO DESACTIVADO - Guardado automático habilitado");
+                    }, 500); // Delay más largo para asegurar que todo esté listo
+                }, 100);
             }
         };
         
         cargarDatos();
     }, [pacienteId]);
+
+    // Helper para verificar si se puede guardar automáticamente
+    const puedeGuardarAutomaticamente = () => {
+        if (bloqueandoCarga.current) {
+            console.log("❌ GUARDADO BLOQUEADO - Carga inicial en progreso");
+            return false;
+        }
+        return fichaCompleta && permitirGuardadoAutomatico;
+    };
 
     // Guardar atributo
     const guardarAtributo = async (atributo, valor) => {
@@ -280,30 +373,13 @@ export default function Ficha({ pacienteId }) {
         );
     }, [recetaInput, medicamentosReceta]);
 
-    // Guardar automáticamente antecedentes mórbidos cuando cambien
-    useEffect(() => {
-        if (antecedentesMorbidos.length > 0) {
-            const seleccionados = antecedentesMorbidos
-                .filter(item => item.checked)
-                .map(item => ({ glosa: item.glosa, checked: true }));
-            guardarAtributo("antecedenteMorbidoIds", seleccionados);
-        }
-    }, [antecedentesMorbidos]);
 
-    // Guardar automáticamente medicamentos cuando cambien
-    useEffect(() => {
-        if (medicamentos.length > 0) {
-            guardarAtributo("medicamentoIds", medicamentos);
-        }
-    }, [medicamentos]);
 
-    // Guardar automáticamente datos de higiene cuando cambien
-    useEffect(() => {
-        // Solo guardar si no es el estado inicial vacío
-        if (Object.values(higiene).some(value => value !== "" && value !== 0 && value !== false)) {
-            guardarAtributo("higiene", higiene);
-        }
-    }, [higiene]);
+
+
+
+
+
 
     // Autocompletar medicamentos
     useEffect(() => {
@@ -320,6 +396,19 @@ export default function Ficha({ pacienteId }) {
         
         setMedicamentoAutocomplete(medicamentosFiltrados);
     }, [medicamentoInput, medicamentosDisponibles]);
+
+    // Cambiar a primer tab disponible si el actual no está permitido
+    useEffect(() => {
+        if (profesional) {
+            const tabsPermitidos = getTabsSegunEspecialidad();
+            const tabActualPermitido = tabsPermitidos.some(t => t.key === tab);
+            
+            if (!tabActualPermitido) {
+                setTab(tabsPermitidos[0].key);
+                console.log(`Tab '${tab}' no permitido para especialidad, cambiando a '${tabsPermitidos[0].key}'`);
+            }
+        }
+    }, [profesional, tab]);
 
     // Handlers
     const handleAnamnesisChange = (e) => {
@@ -382,7 +471,7 @@ export default function Ficha({ pacienteId }) {
         const resp = await fetch(`/api/paciente/historico?pacienteId=${paciente._id}`);
         if(resp.ok) {
             const data = await resp.json();
-            console.log("Data", data);
+            console.log("Histórico completo cargado:", data);
             setHistorico(data.historico);
             setModalHistorico(true);    
         } else {
@@ -391,20 +480,7 @@ export default function Ficha({ pacienteId }) {
         setLoadingHistorico(false);
     };
 
-    const handleVerFicha = async (fichaId) => {
-        setLoadingFicha(true);
-        const resp = await fetch(`/api/profesional/fichaPorId?id=${fichaId}`);
-        if (resp.ok) {
-            const data = await resp.json();
-            console.log('Ver ficha:', data);
-            setFichaInspeccionada(data);
-            setModalHistorico(false);
-            setModalFicha(true);
-        } else {
-            toast.error("Error al cargar la ficha seleccionada.");
-        }
-        setLoadingFicha(false);
-    }
+
 
     const handleTerminarAtencion = async () => {
         setFinishing(true);
@@ -418,6 +494,7 @@ export default function Ficha({ pacienteId }) {
         if (response.ok) {
             const data = await response.json();
             toast.success(data.message || "Atención terminada correctamente");
+            socket.emit('update-centrointegral', { pacienteId: pacienteId });
             // Redirigir o cerrar la ficha después de un breve delay
             setTimeout(() => {
                 router.back(); // o la ruta que corresponda
@@ -428,12 +505,54 @@ export default function Ficha({ pacienteId }) {
         }
     }
 
+    // Funciones de guardado manual (para reemplazar useEffect automáticos)
+    const guardarAntecedentesManuales = () => {
+        if (puedeGuardarAutomaticamente() && antecedentesMorbidos.length > 0) {
+            const seleccionados = antecedentesMorbidos
+                .filter(item => item.checked)
+                .map(item => ({ glosa: item.glosa, checked: true }));
+            console.log("💾 Guardando antecedentes mórbidos MANUALMENTE");
+            guardarAtributo("antecedenteMorbidoIds", seleccionados);
+        }
+    };
+
+    const guardarMedicamentosManuales = () => {
+        if (puedeGuardarAutomaticamente() && medicamentos.length > 0) {
+            console.log("💾 Guardando medicamentos MANUALMENTE");
+            guardarAtributo("medicamentoIds", medicamentos);
+        }
+    };
+
+    const guardarHigieneManuales = () => {
+        if (puedeGuardarAutomaticamente() && Object.values(higiene).some(value => value !== "" && value !== 0 && value !== false)) {
+            console.log("💾 Guardando higiene MANUALMENTE");
+            guardarAtributo("higiene", higiene);
+        }
+    };
+
+    const guardarPartosManuales = () => {
+        if (puedeGuardarAutomaticamente() && partos.length > 0) {
+            console.log("💾 Guardando partos MANUALMENTE");
+            guardarAtributo("partos", partos);
+        }
+    };
+
     return (
         <div className="relative p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-screen">
             {/* Guardando... */}
             {guardando && (
                 <div className="absolute top-2 right-4 bg-[#66754c] text-white px-3 py-1 rounded shadow animate-pulse z-20">
                     Guardando...
+                </div>
+            )}
+
+            {/* Modal Loader Ficha Inicial */}
+            {loadingFichaInicial && (
+                <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-8 shadow-2xl flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#A78D60] mb-4"></div>
+                        <div className="text-[#68563c] font-medium text-lg">Cargando ficha...</div>
+                    </div>
                 </div>
             )}
 
@@ -609,15 +728,25 @@ export default function Ficha({ pacienteId }) {
                                         Alergias
                                     </label>
                                     <textarea
-                                        className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-20 focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                                        className={`w-full border rounded px-3 py-2 bg-white h-20 focus:ring-2 focus:ring-[#fad379]/20 ${
+                                            estaAlergiaVacia() 
+                                                ? 'border-red-500 focus:border-red-600' 
+                                                : 'border-[#d5c7aa] focus:border-[#ac9164]'
+                                        }`}
                                         defaultValue={paciente?.alergias?.join(", ") || ""}
+                                        onChange={(e) => {
+                                            // Actualizar el paciente inmediatamente para que cambie el color del borde
+                                            const nuevasAlergias = e.target.value.split(",").map(item => item.trim());
+                                            setPaciente(prev => ({ ...prev, alergias: nuevasAlergias }));
+                                        }}
                                         onBlur={(e) => {
                                             guardarAtributo("alergias", e.target.value.split(",").map(item => item.trim()));
                                         }}
                                     />
                                 </div>
 
-                                {/* Antecedentes Mórbidos */}
+                                {/* Antecedentes Mórbidos - Solo para NO médicos */}
+                                {!esMedico() && (
                                 <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
                                     <h3 className="text-lg font-bold text-[#6a3858] mb-3">Antecedentes Mórbidos</h3>
                                     <div className="grid grid-cols-2 gap-2 mb-4">
@@ -630,6 +759,8 @@ export default function Ficha({ pacienteId }) {
                                                         const nuevos = [...antecedentesMorbidos];
                                                         nuevos[index].checked = e.target.checked;
                                                         setAntecedentesMorbidos(nuevos);
+                                                        // Guardado manual después de cambio
+                                                        setTimeout(() => guardarAntecedentesManuales(), 100);
                                                     }}
                                                     className="text-[#ac9164]"
                                                 />
@@ -650,6 +781,8 @@ export default function Ficha({ pacienteId }) {
                                                 if (otroMorbido.trim()) {
                                                     setAntecedentesMorbidos([...antecedentesMorbidos, { glosa: otroMorbido.trim(), checked: true }]);
                                                     setOtroMorbido("");
+                                                    // Guardado manual después de agregar
+                                                    setTimeout(() => guardarAntecedentesManuales(), 100);
                                                 }
                                             }}
                                             className="bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d]"
@@ -658,7 +791,9 @@ export default function Ficha({ pacienteId }) {
                                         </button>
                                     </div>
                                 </div>
+                                )}
 
+                                {!esMedico() && (
                                 <div className="space-y-6">
                                         {/* Medicamentos */}
                                         <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -705,6 +840,8 @@ export default function Ficha({ pacienteId }) {
                                                                         frecuencia: 8
                                                                     }]);
                                                                     setMedicamentoInput("");
+                                                                    // Guardado manual después de agregar
+                                                                    setTimeout(() => guardarMedicamentosManuales(), 100);
                                                                 }
                                                             }}
                                                         >
@@ -726,6 +863,8 @@ export default function Ficha({ pacienteId }) {
                                                                                 const nuevos = [...medicamentos];
                                                                                 nuevos[index].unidades = parseInt(e.target.value) || 1;
                                                                                 setMedicamentos(nuevos);
+                                                                                // Guardado manual después de cambio
+                                                                                setTimeout(() => guardarMedicamentosManuales(), 300);
                                                                             }}
                                                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                                         />
@@ -740,6 +879,8 @@ export default function Ficha({ pacienteId }) {
                                                                                 const nuevos = [...medicamentos];
                                                                                 nuevos[index].frecuencia = parseInt(e.target.value) || 8;
                                                                                 setMedicamentos(nuevos);
+                                                                                // Guardado manual después de cambio
+                                                                                setTimeout(() => guardarMedicamentosManuales(), 300);
                                                                             }}
                                                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                                         />
@@ -766,126 +907,131 @@ export default function Ficha({ pacienteId }) {
                                                         className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-24 focus:border-[#ac9164]"
                                                         value={operaciones}
                                                         onChange={(e) => setOperaciones(e.target.value)}
+                                                        onBlur={(e) => guardarAtributo("operaciones", e.target.value)}
                                                         placeholder="Detalle de operaciones quirúrgicas..."
                                                     />
                                                 </div>
                                             </details>
                                         </div>
 
-                                        {/* Métodos Anticonceptivos */}
-                                        <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
-                                            <details className="group">
-                                                <summary className="cursor-pointer text-lg font-bold text-[#6a3858] flex items-center gap-2">
-                                                    <span className="group-open:rotate-90 transition-transform">
-                                                        <FaCaretSquareRight size="1.2rem"/>
-                                                    </span>
-                                                    Métodos Anticonceptivos
-                                                </summary>
-                                                <div className="mt-4 space-y-4">
-                                                    <div className="grid grid-cols-2 gap-2 mb-4">
-                                                        {metodosAnticonceptivos.map((item, index) => (
-                                                            <label key={index} className="flex items-center gap-2">
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    checked={item.checked}
-                                                                    onChange={(e) => {
-                                                                        const nuevos = [...metodosAnticonceptivos];
-                                                                        nuevos[index].checked = e.target.checked;
-                                                                        setMetodosAnticonceptivos(nuevos);
-                                                                    }}
-                                                                    className="text-[#ac9164]"
-                                                                />
-                                                                <span className="text-sm text-[#68563c]">{item.glosa}</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <input 
-                                                            type="text" 
-                                                            placeholder="Otro método anticonceptivo..."
-                                                            className="flex-1 border border-[#d5c7aa] rounded px-3 py-2 bg-white text-sm focus:border-[#ac9164]"
-                                                            value={otroAnticonceptivo}
-                                                            onChange={(e) => setOtroAnticonceptivo(e.target.value)}
-                                                        />
-                                                        <button 
-                                                            onClick={() => {
-                                                                if (otroAnticonceptivo.trim()) {
-                                                                    setMetodosAnticonceptivos([...metodosAnticonceptivos, { glosa: otroAnticonceptivo.trim(), checked: true }]);
-                                                                    setOtroAnticonceptivo("");
-                                                                }
-                                                            }}
-                                                            className="bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d]"
-                                                        >
-                                                            Agregar
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </details>
-                                        </div>
-
-                                        {/* Partos */}
-                                        <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
-                                            <details className="group">
-                                                <summary className="cursor-pointer text-lg font-bold text-[#6a3858] flex items-center gap-2">
-                                                    <span className="group-open:rotate-90 transition-transform">
-                                                        <FaCaretSquareRight size="1.2rem"/>
-                                                    </span>
-                                                    Partos
-                                                </summary>
-                                                <div className="mt-4">
-                                                    <button 
-                                                        onClick={() => setPartos([...partos, { numero: partos.length + 1, genero: "", aborto: false }])}
-                                                        className="mb-4 bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d]"
-                                                    >
-                                                        Agregar Parto
-                                                    </button>
-                                                    <table className="w-full border-collapse">
-                                                        <thead>
-                                                            <tr className="bg-[#d5c7aa]">
-                                                                <th className="border border-[#ac9164] p-2 text-left text-sm">Número</th>
-                                                                <th className="border border-[#ac9164] p-2 text-left text-sm">Género</th>
-                                                                <th className="border border-[#ac9164] p-2 text-left text-sm">Aborto</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {partos.map((parto, index) => (
-                                                                <tr key={index}>
-                                                                    <td className="border border-[#d5c7aa] p-2 text-sm">{parto.numero}</td>
-                                                                    <td className="border border-[#d5c7aa] p-2">
-                                                                        <select 
-                                                                            value={parto.genero}
-                                                                            onChange={(e) => {
-                                                                                const nuevos = [...partos];
-                                                                                nuevos[index].genero = e.target.value;
-                                                                                setPartos(nuevos);
-                                                                            }}
-                                                                            className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                                                        >
-                                                                            <option value="">Seleccionar</option>
-                                                                            <option value="niño">Niño</option>
-                                                                            <option value="niña">Niña</option>
-                                                                            <option value="no sabe">No sabe</option>
-                                                                        </select>
-                                                                    </td>
-                                                                    <td className="border border-[#d5c7aa] p-2">
-                                                                        <input 
-                                                                            type="checkbox" 
-                                                                            checked={parto.aborto}
-                                                                            onChange={(e) => {
-                                                                                const nuevos = [...partos];
-                                                                                nuevos[index].aborto = e.target.checked;
-                                                                                setPartos(nuevos);
-                                                                            }}
-                                                                            className="text-[#ac9164]"
-                                                                        />
-                                                                    </td>
-                                                                </tr>
+                                        {/* Métodos Anticonceptivos - Solo para mujeres */}
+                                        {paciente?.genero === 'F' && (
+                                            <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
+                                                <details className="group">
+                                                    <summary className="cursor-pointer text-lg font-bold text-[#6a3858] flex items-center gap-2">
+                                                        <span className="group-open:rotate-90 transition-transform">
+                                                            <FaCaretSquareRight size="1.2rem"/>
+                                                        </span>
+                                                        Métodos Anticonceptivos
+                                                    </summary>
+                                                    <div className="mt-4 space-y-4">
+                                                        <div className="grid grid-cols-2 gap-2 mb-4">
+                                                            {metodosAnticonceptivos.map((item, index) => (
+                                                                <label key={index} className="flex items-center gap-2">
+                                                                    <input 
+                                                                        type="checkbox" 
+                                                                        checked={item.checked}
+                                                                        onChange={(e) => {
+                                                                            const nuevos = [...metodosAnticonceptivos];
+                                                                            nuevos[index].checked = e.target.checked;
+                                                                            setMetodosAnticonceptivos(nuevos);
+                                                                        }}
+                                                                        className="text-[#ac9164]"
+                                                                    />
+                                                                    <span className="text-sm text-[#68563c]">{item.glosa}</span>
+                                                                </label>
                                                             ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </details>
-                                        </div>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="Otro método anticonceptivo..."
+                                                                className="flex-1 border border-[#d5c7aa] rounded px-3 py-2 bg-white text-sm focus:border-[#ac9164]"
+                                                                value={otroAnticonceptivo}
+                                                                onChange={(e) => setOtroAnticonceptivo(e.target.value)}
+                                                            />
+                                                            <button 
+                                                                onClick={() => {
+                                                                    if (otroAnticonceptivo.trim()) {
+                                                                        setMetodosAnticonceptivos([...metodosAnticonceptivos, { glosa: otroAnticonceptivo.trim(), checked: true }]);
+                                                                        setOtroAnticonceptivo("");
+                                                                    }
+                                                                }}
+                                                                className="bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d]"
+                                                            >
+                                                                Agregar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        )}
+
+                                        {/* Partos - Solo para mujeres */}
+                                        {paciente?.genero === 'F' && (
+                                            <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
+                                                <details className="group">
+                                                    <summary className="cursor-pointer text-lg font-bold text-[#6a3858] flex items-center gap-2">
+                                                        <span className="group-open:rotate-90 transition-transform">
+                                                            <FaCaretSquareRight size="1.2rem"/>
+                                                        </span>
+                                                        Partos
+                                                    </summary>
+                                                    <div className="mt-4">
+                                                        <button 
+                                                            onClick={() => setPartos([...partos, { numero: partos.length + 1, genero: "", aborto: false }])}
+                                                            className="mb-4 bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d]"
+                                                        >
+                                                            Agregar Parto
+                                                        </button>
+                                                        <table className="w-full border-collapse">
+                                                            <thead>
+                                                                <tr className="bg-[#d5c7aa]">
+                                                                    <th className="border border-[#ac9164] p-2 text-left text-sm">Número</th>
+                                                                    <th className="border border-[#ac9164] p-2 text-left text-sm">Género</th>
+                                                                    <th className="border border-[#ac9164] p-2 text-left text-sm">Aborto</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {partos.map((parto, index) => (
+                                                                    <tr key={index}>
+                                                                        <td className="border border-[#d5c7aa] p-2 text-sm">{parto.numero}</td>
+                                                                        <td className="border border-[#d5c7aa] p-2">
+                                                                            <select 
+                                                                                value={parto.genero}
+                                                                                onChange={(e) => {
+                                                                                    const nuevos = [...partos];
+                                                                                    nuevos[index].genero = e.target.value;
+                                                                                    setPartos(nuevos);
+                                                                                }}
+                                                                                className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                                                            >
+                                                                                <option value="">Seleccionar</option>
+                                                                                <option value="niño">Niño</option>
+                                                                                <option value="niña">Niña</option>
+                                                                                <option value="no sabe">No sabe</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td className="border border-[#d5c7aa] p-2">
+                                                                            <input 
+                                                                                type="checkbox" 
+                                                                                checked={parto.aborto}
+                                                                                onChange={(e) => {
+                                                                                    const nuevos = [...partos];
+                                                                                    nuevos[index].aborto = e.target.checked;
+                                                                                    setPartos(nuevos);
+                                                                                }}
+                                                                                className="text-[#ac9164]"
+                                                                            />
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        )}
 
                                         {/* Higiene */}
                                         <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -902,7 +1048,11 @@ export default function Ficha({ pacienteId }) {
                                                             <input 
                                                                 type="checkbox" 
                                                                 checked={higiene.fuma}
-                                                                onChange={(e) => setHigiene({...higiene, fuma: e.target.checked})}
+                                                                onChange={(e) => {
+                                                                    setHigiene({...higiene, fuma: e.target.checked});
+                                                                    // Guardado manual después de cambio
+                                                                    setTimeout(() => guardarHigieneManuales(), 100);
+                                                                }}
                                                                 className="text-[#ac9164]"
                                                             />
                                                             <label className="text-sm text-[#68563c]">Fuma</label>
@@ -911,8 +1061,9 @@ export default function Ficha({ pacienteId }) {
                                                                     <input 
                                                                         type="number" 
                                                                         min="0"
-                                                                        value={higiene.cigarrillosPorDia}
-                                                                        onChange={(e) => setHigiene({...higiene, cigarrillosPorDia: parseInt(e.target.value) || 0})}
+                                                                        value={cigarrillosPorDiaLocal}
+                                                                        onChange={(e) => setCigarrillosPorDiaLocal(parseInt(e.target.value) || 0)}
+                                                                        onBlur={(e) => guardarAtributo("cigarrillosPorDia", parseInt(e.target.value) || 0)}
                                                                         className="w-16 border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                                     />
                                                                     <span className="text-xs text-[#8e9b6d]">por día</span>
@@ -924,8 +1075,9 @@ export default function Ficha({ pacienteId }) {
                                                             <input 
                                                                 type="number" 
                                                                 min="0"
-                                                                value={higiene.aguaCm3Dia}
-                                                                onChange={(e) => setHigiene({...higiene, aguaCm3Dia: parseInt(e.target.value) || 0})}
+                                                                value={aguaCm3DiaLocal}
+                                                                onChange={(e) => setAguaCm3DiaLocal(parseInt(e.target.value) || 0)}
+                                                                onBlur={(e) => guardarAtributo("aguaCm3Dia", parseInt(e.target.value) || 0)}
                                                                 className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                             />
                                                         </div>
@@ -935,37 +1087,93 @@ export default function Ficha({ pacienteId }) {
                                                                 type="number" 
                                                                 min="0"
                                                                 step="0.5"
-                                                                value={higiene.ejercicioHrsSemana}
-                                                                onChange={(e) => setHigiene({...higiene, ejercicioHrsSemana: parseFloat(e.target.value) || 0})}
+                                                                value={ejercicioHrsSemanaLocal}
+                                                                onChange={(e) => setEjercicioHrsSemanaLocal(parseFloat(e.target.value) || 0)}
+                                                                onBlur={(e) => guardarAtributo("ejercicioHrsSemana", parseFloat(e.target.value) || 0)}
                                                                 className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label className="text-sm text-[#68563c]">Nivel de estrés</label>
-                                                            <input 
-                                                                type="text" 
-                                                                value={higiene.nivelStress}
-                                                                onChange={(e) => setHigiene({...higiene, nivelStress: e.target.value})}
-                                                                className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                                                placeholder="Bajo/Medio/Alto"
-                                                            />
+                                                            <label className="text-sm text-[#68563c] mb-2 block">Nivel de estrés</label>
+                                                            <div className="flex gap-2 justify-center">
+                                                                {['Bajo', 'Medio', 'Alto'].map((nivel, index) => {
+                                                                    const emojis = ['😊', '😐', '😰'];
+                                                                    const colors = [
+                                                                        'bg-green-50 border-green-300 text-green-700 hover:bg-green-100', 
+                                                                        'bg-[#fad379]/20 border-[#fad379] text-[#68563c] hover:bg-[#fad379]/30', 
+                                                                        'bg-red-50 border-red-300 text-red-700 hover:bg-red-100'
+                                                                    ];
+                                                                    const selectedColors = [
+                                                                        'bg-green-100 border-green-400 text-green-800 ring-2 ring-green-300', 
+                                                                        'bg-[#fad379]/40 border-[#ac9164] text-[#68563c] ring-2 ring-[#ac9164]', 
+                                                                        'bg-red-100 border-red-400 text-red-800 ring-2 ring-red-300'
+                                                                    ];
+                                                                    const isSelected = higiene.nivelStress === index;
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={nivel}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setHigiene({...higiene, nivelStress: index});
+                                                                                // Guardado manual después de cambio
+                                                                                setTimeout(() => guardarHigieneManuales(), 100);
+                                                                            }}
+                                                                            className={`flex-1 p-3 border-2 rounded-lg transition-all ${
+                                                                                isSelected ? selectedColors[index] : colors[index]
+                                                                            }`}
+                                                                        >
+                                                                            <div className="text-2xl mb-1">{emojis[index]}</div>
+                                                                            <div className="text-xs font-medium">{nivel}</div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
                                                         <div>
-                                                            <label className="text-sm text-[#68563c]">Nivel de sueño</label>
-                                                            <input 
-                                                                type="text" 
-                                                                value={higiene.nivelSueno}
-                                                                onChange={(e) => setHigiene({...higiene, nivelSueno: e.target.value})}
-                                                                className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                                                placeholder="Bueno/Regular/Malo"
-                                                            />
+                                                            <label className="text-sm text-[#68563c] mb-2 block">Nivel de sueño</label>
+                                                            <div className="flex gap-2 justify-center">
+                                                                {['Bueno', 'Regular', 'Malo'].map((nivel, index) => {
+                                                                    const emojis = ['😴', '😪', '😵'];
+                                                                    const colors = [
+                                                                        'bg-green-50 border-green-300 text-green-700 hover:bg-green-100', 
+                                                                        'bg-[#fad379]/20 border-[#fad379] text-[#68563c] hover:bg-[#fad379]/30', 
+                                                                        'bg-red-50 border-red-300 text-red-700 hover:bg-red-100'
+                                                                    ];
+                                                                    const selectedColors = [
+                                                                        'bg-green-100 border-green-400 text-green-800 ring-2 ring-green-300', 
+                                                                        'bg-[#fad379]/40 border-[#ac9164] text-[#68563c] ring-2 ring-[#ac9164]', 
+                                                                        'bg-red-100 border-red-400 text-red-800 ring-2 ring-red-300'
+                                                                    ];
+                                                                    const isSelected = higiene.calidadDormir === index;
+                                                                    
+                                                                    return (
+                                                                        <button
+                                                                            key={nivel}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setHigiene({...higiene, calidadDormir: index});
+                                                                                // Guardado manual después de cambio
+                                                                                setTimeout(() => guardarHigieneManuales(), 100);
+                                                                            }}
+                                                                            className={`flex-1 p-3 border-2 rounded-lg transition-all ${
+                                                                                isSelected ? selectedColors[index] : colors[index]
+                                                                            }`}
+                                                                        >
+                                                                            <div className="text-2xl mb-1">{emojis[index]}</div>
+                                                                            <div className="text-xs font-medium">{nivel}</div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div>
                                                         <label className="text-sm text-[#68563c]">Hábito alimenticio</label>
                                                         <textarea
-                                                            value={higiene.habitoAlimenticio}
-                                                            onChange={(e) => setHigiene({...higiene, habitoAlimenticio: e.target.value})}
+                                                            value={habitoAlimenticioLocal}
+                                                            onChange={(e) => setHabitoAlimenticioLocal(e.target.value)}
+                                                            onBlur={(e) => guardarAtributo("habitoAlimenticio", e.target.value)}
                                                             className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-20 focus:border-[#ac9164] text-sm"
                                                             placeholder="Describe los hábitos alimenticios del paciente..."
                                                         />
@@ -974,6 +1182,7 @@ export default function Ficha({ pacienteId }) {
                                             </details>
                                         </div>
                                     </div>
+                                )}
                             </div>
                         )}
 
@@ -1167,9 +1376,9 @@ export default function Ficha({ pacienteId }) {
 
                 {/* Lengüetas verticales tipo carpeta (derecha) */}
                 <div className="relative flex flex-col justify-start bg-transparent h-full -ml-0.5 z-20">
-                    {TABS.map((t, index) => {
+                    {getTabsSegunEspecialidad().map((t, index) => {
                         const isActive = tab === t.key;
-                        const isLast = index === TABS.length - 1;
+                        const isLast = index === getTabsSegunEspecialidad().length - 1;
                         const isFirst = index === 0;
                         return (
                             <button
@@ -1201,146 +1410,103 @@ export default function Ficha({ pacienteId }) {
                 </div>
             </div>
 
-            {/* Modal de histórico de fichas */}
-            <Dialog open={modalHistorico} onClose={() => {}} className="fixed z-50 inset-0 flex items-center justify-center">
-                <div className="fixed inset-0 bg-black/30" />
-                <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-[800px] max-h-[600px]">
-                    <button
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
-                        onClick={() => {
-                            setModalHistorico(false);                            
-                        }}
-                    >
-                        <LiaTimesSolid size={22} />
-                    </button>
-                    <DialogTitle className="font-bold text-lg mb-4 text-[#6a3858]">Histórico de Fichas</DialogTitle>
-                    
-                    <div className="overflow-y-auto max-h-[500px]">
-                        <table className="w-full border-collapse">
-                            <thead className="bg-[#d5c7aa] sticky top-0">
-                                <tr>
-                                    <th className="text-left p-2 font-semibold text-[#68563c] border border-[#ac9164]">Fecha</th>
-                                    <th className="text-left p-2 font-semibold text-[#68563c] border border-[#ac9164]">Especialista</th>
-                                    <th className="text-center p-2 font-semibold text-[#68563c] border border-[#ac9164]">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {historico?.length ? historico.map((ficha, index) => (
-                                    <tr key={index} className="hover:bg-[#fad379]/20">
-                                        <td className="p-2 border border-[#d5c7aa] text-[#68563c]">
-                                            {new Date(ficha.fecha).toLocaleDateString('es-CL')}
-                                        </td>
-                                        <td className="p-2 border border-[#d5c7aa] text-[#68563c]">
-                                            {ficha.profesional.nombre}
-                                        </td>
-                                        <td className="p-2 border border-[#d5c7aa] text-center">
-                                            <button
-                                                disabled={loadingFicha}
-                                                className="bg-[#66754c] text-white px-3 py-1 rounded text-xs font-semibold shadow-md hover:bg-[#8e9b6d] hover:shadow-lg transition-all transform hover:-translate-y-0.5"
-                                                onClick={() => handleVerFicha(ficha._id)}
-                                            >
-                                                VER
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )) : <tr>
-                                    <td colSpan={3} className="text-center p-4 text-gray-400">
-                                        No hay fichas anteriores registradas
-                                    </td>
-                                </tr>}
-                            </tbody>
-                        </table>
-                        {historico.length === 0 && (
-                            <div className="text-center text-gray-400 mt-8 py-8">
-                                No hay fichas anteriores registradas
-                            </div>
-                        )}
-                        {loadingFicha && <div className="mt-4 flex justify-center h-12 items-center">
-                            <Loader texto="Cargando ficha..." />
-                        </div>}
+            {/* Componente de histórico de fichas mejorado */}
+            <HistoricoFichas 
+                isOpen={modalHistorico}
+                onClose={() => setModalHistorico(false)}
+                historico={historico}
+                loading={loadingHistorico}
+                pacienteNombre={paciente ? `${paciente.nombres} ${paciente.apellidos || ''}` : ''}
+            />
+
+
+
+            <div className="fixed bottom-6 right-6 z-50">
+                {/* Tooltip */}
+                {showTooltip && (
+                    <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap">
+                        Finalizar sesión
+                        <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
                     </div>
-                </div>
-            </Dialog>
-
-            {/* Modal de ficha histórica (solo lectura) */}
-            <Dialog open={modalFicha} onClose={() => {
-                setModalFicha(false);
-            }} className="fixed z-50 inset-0 flex items-center justify-center">
-                <div className="fixed inset-0 bg-black/30" />
-                <div className="relative bg-[#f6eedb] rounded-xl shadow-xl p-4 z-10 w-[95vw] h-[90vh] max-w-4xl">
-                    <button
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 z-30"
-                        onClick={() => {
-                            setModalFicha(false);
-                            setModalHistorico(true);
-                        }}
-                    >
-                        <LiaTimesSolid size={22} />
-                    </button>
-                    
-                    <DialogTitle className="font-bold text-lg mb-4 text-[#6a3858]">
-                         {dayjs(fichaInspeccionada?.createdAt).format("DD/MMM/YYYY HH:mm") ?? "..."}
-                         <br/>{dayjs(new Date(fichaInspeccionada?.createdAt)).fromNow()}
-                         <br/>Dr. {fichaInspeccionada?.profesional?.userId?.name ?? "..."}
-                    </DialogTitle>
-
-                    {/* Contenido principal con scroll */}
-                    <div className="overflow-y-auto h-[calc(100%-140px)]">
-                        <div className="space-y-6">                            
-
-                            {/* Anamnesis */}
-                            <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
-                                <h3 className="text-lg font-bold text-[#6a3858] mb-3">Anamnesis / Exámen Físico</h3>
-                                <div className="text-[#68563c] leading-relaxed">{fichaInspeccionada?.ficha?.anamnesis ?? "..."}</div>
-                            </div>
-
-                            {/* Exámenes */}
-                            <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
-                                <h3 className="text-lg font-bold text-[#6a3858] mb-3">Exámenes solicitados</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    {fichaInspeccionada?.ficha?.solicitudExamenes?.map((examen, indEx) => <span className="bg-[#fad379]/30 text-[#68563c] px-3 py-1 rounded border border-[#fad379]">                            
-                                        <span key={`examen_${indEx}`} className="font-mono text-xs">{examen}</span>                                        
-                                    </span>)}
-                                </div>
-                            </div>
-
-                            {/* Indicaciones */}
-                            <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
-                                <h3 className="text-lg font-bold text-[#6a3858] mb-3">Indicaciones</h3>
-                                <div className="text-[#68563c] leading-relaxed">{fichaInspeccionada?.ficha?.indicaciones?.split("- ").map((linea, index) => (
-                                    linea ? <span key={index}>
-                                        {index > 0 && <br /> }                                    
-                                        {"• " + linea}
-                                    </span> : null
-                                ))}</div>
-                            </div>
-
-                            {/* Receta */}
-                            <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
-                                <h3 className="text-lg font-bold text-[#6a3858] mb-3">Receta médica</h3>
-                                <div className="space-y-2">
-                                    {fichaInspeccionada?.ficha?.recetas?.map((receta, rIdx) => <div key={`receta_${rIdx}`} className="bg-[#fad379]/20 border border-[#fad379] rounded px-4 py-3 flex items-center gap-3">
-                                        <span className="text-xs text-[#8e9b6d] font-mono">{dayjs(receta.fecha).format("DD/MM/YYYY")}</span>
-                                        <span className="flex-1 font-medium text-[#68563c]">{receta.texto}</span>
-                                    </div>)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </Dialog>
-
-            <button
-                className="fixed bottom-6 right-6 z-50 bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center"
-                title="CiPower"
-                onClick={() => {
-                    handleTerminarAtencion();
-                }}
-            >
-                {/* SVG CiPower logo (placeholder) */}
-                <CiPower className="text-3xl text-[#68563c]" />
-            </button>
+                )}
+                
+                <button
+                    className="bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center"
+                    onMouseEnter={() => setShowTooltip(true)}
+                    onMouseLeave={() => setShowTooltip(false)}
+                    onClick={() => setModalConfirmacion(true)}
+                >
+                    {/* SVG CiPower logo (placeholder) */}
+                    <CiPower className="text-3xl text-[#68563c]" />
+                </button>
+            </div>
             <ToastContainer />
+
+            {/* Modal de Alerta de Alergias */}
+            <Dialog open={modalAlergias} onClose={() => setModalAlergias(false)} className="fixed z-50 inset-0 flex items-center justify-center">
+                <div className="fixed inset-0 bg-black/30" onClick={() => setModalAlergias(false)} />
+                <div className="bg-white rounded-lg p-6 shadow-xl border-2 border-red-500 max-w-md mx-4 relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">!</span>
+                        </div>
+                        <h3 className="text-lg font-bold text-red-700">¡Atención!</h3>
+                    </div>
+                    
+                    <div className="mb-6">
+                        <h4 className="font-semibold text-red-600 mb-2">Alergias</h4>
+                        <p className="text-gray-700">
+                            Esta información es importante. Por favor, complete el campo de alergias del paciente.
+                        </p>
+                    </div>
+                    
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={() => setModalAlergias(false)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-medium transition"
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            </Dialog>
+
+            {/* Modal de Confirmación para Finalizar Sesión */}
+            <Dialog open={modalConfirmacion} onClose={() => setModalConfirmacion(false)} className="fixed z-50 inset-0 flex items-center justify-center">
+                <div className="fixed inset-0 bg-black/30" onClick={() => setModalConfirmacion(false)} />
+                <div className="bg-white rounded-lg p-6 shadow-xl border-2 border-[#ac9164] max-w-md mx-4 relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 bg-[#ac9164] rounded-full flex items-center justify-center">
+                            <CiPower className="text-white text-lg" />
+                        </div>
+                        <h3 className="text-lg font-bold text-[#68563c]">Finalizar Sesión</h3>
+                    </div>
+                    
+                    <div className="mb-6">
+                        <p className="text-gray-700">
+                            ¿Seguro desea terminar la sesión?
+                        </p>
+                    </div>
+                    
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={() => setModalConfirmacion(false)}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded font-medium transition"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={() => {
+                                setModalConfirmacion(false);
+                                handleTerminarAtencion();
+                            }}
+                            className="bg-[#ac9164] hover:bg-[#8e7a4f] text-white px-4 py-2 rounded font-medium transition"
+                        >
+                            Finalizar
+                        </button>
+                    </div>
+                </div>
+            </Dialog>
 
             {/* Overlay de finalización */}
             {finishing &&<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

@@ -10,7 +10,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
 import { USER_ROLE } from "@/app/utils/constants";
 
-export async function GET(req) {
+export async function GET() {
     await connectMongoDB();
     console.log("[GET] /api/panoramica - Iniciando petición");
 
@@ -56,7 +56,8 @@ export async function GET(req) {
     // Obtiene arribos
     const arribos = await Arribo.find({
         fechaLlegada: { $exists: true },
-        fechaRetino: { $exists: false }
+        fechaAtencion: null,
+        fechaRetiro: null
     }).populate("pacienteId").populate("profesionalId");
     
     console.log("[GET] /api/panoramica - Pacientes encontrados:", pacientes.length);

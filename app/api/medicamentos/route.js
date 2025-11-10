@@ -34,7 +34,7 @@ import { authOptions } from "@/app/utils/authOptions";
  *   ]
  * }
  */
-export async function GET(req) {
+export async function GET() {
     await connectMongoDB();
 
     const session = await getServerSession(authOptions);
@@ -53,7 +53,7 @@ export async function GET(req) {
         return NextResponse.json({
             medicamentos
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Error al obtener medicamentos" }, { status: 500 });
     }
 }
