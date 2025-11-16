@@ -111,7 +111,6 @@ const historialPacienteSchema = new Schema({
 
 // Índices compuestos para consultas eficientes
 historialPacienteSchema.index({ rut: 1, fechaAtencion: -1 });
-historialPacienteSchema.index({ fichaId: 1 });
 historialPacienteSchema.index({ profesionalId: 1, fechaAtencion: -1 });
 historialPacienteSchema.index({ usuarioId: 1, fechaAtencion: -1 });
 
