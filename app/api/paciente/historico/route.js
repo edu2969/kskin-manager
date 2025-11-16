@@ -4,6 +4,7 @@ import Ficha from "@/models/ficha";
 import User from "@/models/user";
 import Profesional from "@/models/profesional";
 import Especialidad from "@/models/especialidad";
+import Paciente from "@/models/paciente";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
 
@@ -15,6 +16,18 @@ export async function GET(req) {
 
     if (!pacienteId) {
         return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
+    }
+
+    if (!mongoose.models.Profesional) {
+        mongoose.model("Profesional", Profesional.schema);
+    }
+
+    if (!mongoose.models.Paciente) {
+        mongoose.model("Paciente", Paciente.schema);
+    }
+
+    if (!mongoose.models.Especialidad) {
+        mongoose.model("Especialidad", Especialidad.schema);
     }
 
     const session = await getServerSession(authOptions);
