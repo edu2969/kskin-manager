@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import Loader from "../Loader";
 import { LuDoorClosed, LuDoorOpen, LuSearch } from "react-icons/lu";
 import { signOut } from 'next-auth/react';
+import HistoricoFichas from "../HistoricoFichas"
 
 export default function Panoramica({ session }) {
     const [nuevoPacienteModal, setNuevoPacienteModal] = useState(false);
@@ -36,6 +37,33 @@ export default function Panoramica({ session }) {
     const [registrandoArribo, setRegistrandoArribo] = useState(false);
     const [confirmandoAsignacion, setConfirmandoAsignacion] = useState(false);
     const router = useRouter();
+
+    // Histórico de paciente modal states
+    const [modalHistorico, setModalHistorico] = useState(false);
+    const [loadingHistorico, setLoadingHistorico] = useState(false);
+    const [historico, setHistorico] = useState([]);
+    const [pacienteHistorico, setPacienteHistorico] = useState(null);
+
+    // Fetch histórico de paciente
+    const fetchHistorico = async (paciente) => {
+        setLoadingHistorico(true);
+        if (!paciente?._id) return;
+        try {
+            const resp = await fetch(`/api/paciente/historico?pacienteId=${paciente._id}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                console.log("Histórico completo cargado:", data);
+                setHistorico(data.historico);
+                setPacienteHistorico(paciente);
+                setModalHistorico(true);
+            } else {
+                toast.error("Error al cargar el histórico de fichas.");
+            }
+        } catch (err) {
+            toast.error("Error de red al cargar el histórico.");
+        }
+        setLoadingHistorico(false);
+    };
 
     const registrarArribo = async (paciente) => {
         setRegistrandoArribo(true);
@@ -160,7 +188,7 @@ export default function Panoramica({ session }) {
                     : b
             )
         );
-        let progreso = 0;
+        let progro = 0;
         let duracion = boxes.find((b) => b.id === boxId)?.ocupacion.tiempoEstimado;
         console.log("Iniciando progreso box", boxId, "duracion", duracion);
         timers.current[boxId] = setInterval(() => {
@@ -322,6 +350,17 @@ export default function Panoramica({ session }) {
                             {arribos.length} / 20
                         </span>
                     </div>
+                    {/* Link único para ver histórico de paciente (solo profesional) */}
+                    {role === USER_ROLE.profesional && (
+                        <div className="mb-4">
+                            <button
+                                className="px-3 py-2 rounded-full bg-pink-200 hover:bg-pink-300 text-pink-800 font-semibold shadow transition"
+                                onClick={() => setModalHistorico('buscar')}
+                            >
+                                Ver histórico de paciente
+                            </button>
+                        </div>
+                    )}
                     {arribos.filter(a => a.fechaLlegada).length > 0 && role === USER_ROLE.profesional && <div className="flex rounded p-2 text-gray-400 bg-gray-100 mb-2">
                         <RiDragDropLine size="4rem" />
                         <span className="px-2 text-sm">Toma al paciente y arrastralo hacia el box en dónde lo atenderás.</span>
@@ -678,6 +717,80 @@ export default function Panoramica({ session }) {
                             Cancelar
                         </button>
                     </div>
+                </div>
+            </Dialog>
+
+            {/* Histórico de paciente modal */}
+            {/* Modal de búsqueda por RUT y modal de histórico */}
+            <Dialog open={modalHistorico !== false} onClose={() => setModalHistorico(false)} className="fixed z-50 inset-0 flex items-center justify-center">
+                <div className="fixed inset-0 bg-black/30" />
+                <div className="relative bg-white rounded-xl shadow-xl p-8 z-10 w-[400px] max-h-[90vh] overflow-y-auto">
+                    <button
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+                        onClick={() => setModalHistorico(false)}
+                    >
+                        <IoMdClose size={22} />
+                    </button>
+                    {modalHistorico === 'buscar' ? (
+                        <>
+                            <DialogTitle className="font-bold text-lg mb-4 text-pink-400">Buscar paciente por RUT</DialogTitle>
+                            <div className="mb-4">
+                                <RutInput
+                                    value={rutBusqueda}
+                                    onChange={setRutBusqueda}
+                                    className="w-full rounded border border-pink-300 px-3 py-2 text-lg bg-white focus:border-pink-400 focus:ring-2 focus:ring-pink-200/20"
+                                    placeholder="Ej: 12.345.678-9"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    className="flex-1 rounded bg-pink-200 hover:bg-pink-300 text-pink-800 font-semibold py-2 transition"
+                                    onClick={async () => {
+                                        if (!rutBusqueda.trim()) return toast.error("Ingresa un RUT válido");
+                                        setSearching(true);
+                                        try {
+                                            const resp = await fetch(`/api/recepcion/pacientePorRut?rut=${rutBusqueda}`);
+                                            if (resp.ok) {
+                                                const data = await resp.json();
+                                                if (data.paciente) {
+                                                    setPacienteHistorico(data.paciente);
+                                                    await fetchHistorico(data.paciente);
+                                                    setModalHistorico('historico');
+                                                } else {
+                                                    toast.error("Paciente no encontrado");
+                                                }
+                                            } else {
+                                                toast.error("Error al buscar paciente");
+                                            }
+                                        } catch (err) {
+                                            toast.error("Error de red al buscar paciente");
+                                        }
+                                        setSearching(false);
+                                    }}
+                                    type="button"
+                                    title="Buscar"
+                                    disabled={searching}
+                                >
+                                    {!searching ? (
+                                        <LuSearch size="1.8rem" />
+                                    ) : (<Loader texto="" />)}
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <DialogTitle className="font-bold text-lg mb-4 text-pink-400">Histórico de paciente</DialogTitle>
+                            <div>
+                                <HistoricoFichas
+                                    isOpen={modalHistorico === 'historico'}
+                                    onClose={() => setModalHistorico(false)}
+                                    historico={historico}
+                                    loading={loadingHistorico}
+                                    pacienteNombre={pacienteHistorico?.nombres + ' ' + pacienteHistorico?.apellidos}
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
             </Dialog>
 
