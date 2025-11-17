@@ -188,7 +188,6 @@ export default function Panoramica({ session }) {
                     : b
             )
         );
-        let progro = 0;
         let duracion = boxes.find((b) => b.id === boxId)?.ocupacion.tiempoEstimado;
         console.log("Iniciando progreso box", boxId, "duracion", duracion);
         timers.current[boxId] = setInterval(() => {
