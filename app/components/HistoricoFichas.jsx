@@ -483,6 +483,35 @@ export default function HistoricoFichas({
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Tabla de Partos */}
+                                {fichaSeleccionada.paciente.partos?.length > 0 && (
+                                    <div className="bg-gradient-to-r from-pink-50 to-pink-100 border border-pink-200 rounded-xl p-5">
+                                        <h3 className="text-lg font-bold text-pink-800 mb-3 flex items-center gap-2">
+                                            🤱 Partos
+                                        </h3>
+                                        <table className="min-w-full border text-sm">
+                                            <thead>
+                                                <tr className="bg-pink-100">
+                                                    <th className="border px-2 py-1">Fecha</th>
+                                                    <th className="border px-2 py-1">Tipo de parto</th>
+                                                    <th className="border px-2 py-1">Meses</th>
+                                                    <th className="border px-2 py-1">Tipo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {fichaSeleccionada.paciente.partos.map((parto, idx) => (
+                                                    <tr key={idx}>
+                                                        <td className="border px-2 py-1">{parto.fecha ? dayjs(parto.fecha).format('DD-MM-YYYY') : '-'}</td>
+                                                        <td className="border px-2 py-1">{parto.tipoParto}</td>
+                                                        <td className="border px-2 py-1">{parto.meses ?? '-'}</td>
+                                                        <td className="border px-2 py-1">{parto.fueCesarea ? 'Cesárea' : parto.fueNormal ? 'Normal' : '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

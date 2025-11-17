@@ -501,7 +501,7 @@ export default function Ficha({ pacienteId }) {
         if (response.ok) {
             const data = await response.json();
             toast.success(data.message || "Atención terminada correctamente");
-            socket.emit('update-centrointegral', { pacienteId: pacienteId });
+            socket.emit('update-centrointegral');
             // Redirigir o cerrar la ficha después de un breve delay
             setTimeout(() => {
                 router.back(); // o la ruta que corresponda
@@ -915,14 +915,14 @@ export default function Ficha({ pacienteId }) {
                                             </details>
                                         </div>
 
-                                        {/* Operaciones */}
+                                        {/* Operaciones y/ó Lesiones */}
                                         <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
                                             <details className="group">
                                                 <summary className="cursor-pointer text-lg font-bold text-[#6a3858] flex items-center gap-2">
                                                     <span className="group-open:rotate-90 transition-transform">
                                                         <FaCaretSquareRight size="1.2rem"/>
                                                     </span>
-                                                    Operaciones
+                                                    Operaciones y/ó Lesiones
                                                 </summary>
                                                 <div className="mt-4">
                                                     <textarea
@@ -930,7 +930,7 @@ export default function Ficha({ pacienteId }) {
                                                         value={operaciones}
                                                         onChange={(e) => setOperaciones(e.target.value)}
                                                         onBlur={(e) => guardarAtributo("operaciones", e.target.value)}
-                                                        placeholder="Detalle de operaciones quirúrgicas..."
+                                                        placeholder="Detalle de operaciones quirúrgicas y/o lesiones..."
                                                     />
                                                 </div>
                                             </details>

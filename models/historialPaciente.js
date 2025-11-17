@@ -8,6 +8,8 @@ const partoSchema = new Schema({
         required: true
     },
     meses: { type: Number },
+    fueNormal: { type: Boolean, default: false },
+    fueCesarea: { type: Boolean, default: false },
     genero: { type: String },
 }, {
     _id: false

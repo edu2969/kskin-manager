@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectMongoDB } from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import Ficha from "@/models/ficha";
