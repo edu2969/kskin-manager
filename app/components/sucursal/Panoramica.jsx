@@ -385,6 +385,14 @@ export default function Panoramica({ session }) {
                                 draggable={role === USER_ROLE.profesional}
                                 onDragStart={() => onDragStart(arribo)}
                                 onDragEnd={onDragEnd}
+                                onTouchStart={e => {
+                                    e.stopPropagation();
+                                    onDragStart(arribo);
+                                }}
+                                onTouchEnd={e => {
+                                    e.stopPropagation();
+                                    onDragEnd();
+                                }}
                                 style={{ opacity: draggedPaciente?.id === arribo.id ? 0.5 : 1 }}
                             >
                                 {arribo.pacienteId?.genero === "F" && (
@@ -422,6 +430,16 @@ export default function Panoramica({ session }) {
                             e.preventDefault();
                             onDropBox(box);
                         }}
+                        onTouchMove={e => {
+                            // Detecta si el dedo está sobre el box y ejecuta drop
+                            const touch = e.touches[0];
+                            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                            if (target && target.closest(`[data-box-id='${box._id}']`)) {
+                                onDropBox(box);
+                                onDragEnd();
+                            }
+                        }}
+                        data-box-id={box._id}
                     >
                         {boxLibre(box) ? <LuDoorOpen className="text-4xl mb-2 text-[#d5c7aa]" /> : <LuDoorClosed className="text-4xl mb-2 text-white" />}
                         <div className="font-bold text-lg mb-1">Box {box.numero}</div>
@@ -472,7 +490,7 @@ export default function Panoramica({ session }) {
             {/* Modal de confirmación */}
             <Dialog open={modal.open} onClose={() => setModal({ open: false, paciente: null, box: null })} className="fixed z-50 inset-0 flex items-center justify-center">
                 <div className="fixed inset-0 bg-black/30" />
-                <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-96">
+                <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-128">
                     <button
                         className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
                         onClick={() => setModal({ open: false, paciente: null, box: null })}
@@ -771,7 +789,7 @@ export default function Panoramica({ session }) {
                                     disabled={searching}
                                 >
                                     {!searching ? (
-                                        <LuSearch size="1.8rem" />
+                                        <div className="flex justify-center items-center gap-2"><LuSearch size="1.8rem" /> Buscar paciente</div>
                                     ) : (<Loader texto="" />)}
                                 </button>
                             </div>

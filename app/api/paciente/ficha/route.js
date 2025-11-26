@@ -6,6 +6,8 @@ import Profesional from "@/models/profesional";
 import User from "@/models/user";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
+import mongoose from "mongoose";
+import Especialidad from "@/models/especialidad";
 
 export async function GET(req) {
     await connectMongoDB();
@@ -15,6 +17,10 @@ export async function GET(req) {
 
     if (!pacienteId) {
         return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
+    }
+
+    if (!mongoose.models.Especialidad) {
+        mongoose.model("Especialidad", Especialidad.schema);
     }
 
     const session = await getServerSession(authOptions);

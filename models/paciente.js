@@ -2,11 +2,7 @@ import mongoose, { Schema, models } from "mongoose";
 
 const partoSchema = new Schema({
     fecha: { type: Date },
-    tipoParto: { 
-        type: String, 
-        enum: ["VAGINAL", "CESAREA", "ABORTO"],
-        required: true
-    },
+    tipo: { type: String },
     meses: { type: Number },
     genero: { type: String },
 }, {
@@ -14,7 +10,7 @@ const partoSchema = new Schema({
 });
 
 const higieneSchema = new Schema({
-    fuma: { type: Boolean, default: false },
+    fuma: { type: Number, default: 0 },
     agua: { type: Number },
     ejercicioSemanal: { type: Number },
     nivelStress: { type: Number },
@@ -46,6 +42,7 @@ const pacienteSchema = new Schema({
         type: Object,
         ref: "AntecedenteMorbido"
     }],
+    antecedentesMorbidosAdicionales: { type: String },
     medicamentoIds: [{
         type: Object,
         ref: "Medicamento"

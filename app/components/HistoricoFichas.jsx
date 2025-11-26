@@ -11,10 +11,10 @@ import 'dayjs/locale/es';
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 
-export default function HistoricoFichas({ 
-    isOpen, 
-    onClose, 
-    historico = [], 
+export default function HistoricoFichas({
+    isOpen,
+    onClose,
+    historico = [],
     loading = false,
     pacienteNombre = ""
 }) {
@@ -45,7 +45,7 @@ export default function HistoricoFichas({
     return (
         <>
             {/* Modal principal del histórico */}
-            <Dialog 
+                        <Dialog 
                 open={isOpen} 
                 onClose={onClose} 
                 className="fixed z-50 inset-0 flex items-center justify-center"
@@ -174,14 +174,14 @@ export default function HistoricoFichas({
             </Dialog>
 
             {/* Modal de detalle de ficha */}
-            <Dialog 
-                open={modalDetalle} 
-                onClose={() => setModalDetalle(false)} 
+            <Dialog
+                open={modalDetalle}
+                onClose={() => setModalDetalle(false)}
                 className="fixed z-[60] inset-0 flex items-center justify-center"
             >
                 <div className="fixed inset-0 bg-black/50" />
                 <div className="relative bg-white rounded-2xl shadow-2xl z-10 w-[95vw] max-w-5xl h-[90vh] flex flex-col">
-                    
+
                     {/* Header del detalle */}
                     <div className="bg-gradient-to-r from-[#6a3858] to-[#8e9b6d] p-6 rounded-t-2xl text-white relative">
                         <button
@@ -190,7 +190,7 @@ export default function HistoricoFichas({
                         >
                             <LiaTimesSolid size={24} />
                         </button>
-                        
+
                         {fichaSeleccionada && (
                             <div>
                                 <DialogTitle className="text-2xl font-bold mb-2">
@@ -221,7 +221,7 @@ export default function HistoricoFichas({
                     {fichaSeleccionada && (
                         <div className="flex-1 overflow-y-auto p-6">
                             <div className="grid gap-6">
-                                
+
                                 {/* Información del Paciente */}
                                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
                                     <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
@@ -403,7 +403,7 @@ export default function HistoricoFichas({
                                                     <div className="space-y-1">
                                                         {fichaSeleccionada.paciente.medicamentos.map((med, idx) => (
                                                             <div key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mb-1">
-                                                                {med.nombre} 
+                                                                {med.nombre}
                                                                 {med.unidades && ` - ${med.unidades} unidades`}
                                                                 {med.frecuencia && ` cada ${med.frecuencia}h`}
                                                             </div>
@@ -421,14 +421,14 @@ export default function HistoricoFichas({
                                         <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
                                             🌿 Hábitos e Higiene
                                         </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                                             {fichaSeleccionada.paciente.higiene.fuma && (
                                                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                                     <p className="font-semibold text-red-700 flex items-center gap-2">
                                                         🚬 Tabaquismo
                                                     </p>
                                                     <p className="text-red-600">
-                                                        Fuma {fichaSeleccionada.paciente.higiene.cigarrillosPorDia || 'cantidad no especificada'} cigarrillos por día
+                                                        {fichaSeleccionada.paciente.higiene.fuma} cigarrillos por día
                                                     </p>
                                                 </div>
                                             )}
@@ -486,26 +486,36 @@ export default function HistoricoFichas({
 
                                 {/* Tabla de Partos */}
                                 {fichaSeleccionada.paciente.partos?.length > 0 && (
-                                    <div className="bg-gradient-to-r from-pink-50 to-pink-100 border border-pink-200 rounded-xl p-5">
+                                    <div className="bg-gradient-to-r from-pink-50 to-pink-100 border border-pink-200 rounded-xl p-5 mt-6">
                                         <h3 className="text-lg font-bold text-pink-800 mb-3 flex items-center gap-2">
                                             🤱 Partos
                                         </h3>
-                                        <table className="min-w-full border text-sm">
+                                        <table className="min-w-full border text-sm rounded-lg overflow-hidden shadow">
                                             <thead>
-                                                <tr className="bg-pink-100">
-                                                    <th className="border px-2 py-1">Fecha</th>
-                                                    <th className="border px-2 py-1">Tipo de parto</th>
-                                                    <th className="border px-2 py-1">Meses</th>
-                                                    <th className="border px-2 py-1">Tipo</th>
+                                                <tr className="bg-pink-100 text-pink-800">
+                                                    <th className="border px-3 py-2 font-semibold">#</th>
+                                                    <th className="border px-3 py-2 font-semibold">Fecha</th>
+                                                    <th className="border px-3 py-2 font-semibold">Género</th>
+                                                    <th className="border px-3 py-2 font-semibold">¿Abortó?</th>
+                                                    <th className="border px-3 py-2 font-semibold">Tipo</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {fichaSeleccionada.paciente.partos.map((parto, idx) => (
-                                                    <tr key={idx}>
-                                                        <td className="border px-2 py-1">{parto.fecha ? dayjs(parto.fecha).format('DD-MM-YYYY') : '-'}</td>
-                                                        <td className="border px-2 py-1">{parto.tipoParto}</td>
-                                                        <td className="border px-2 py-1">{parto.meses ?? '-'}</td>
-                                                        <td className="border px-2 py-1">{parto.fueCesarea ? 'Cesárea' : parto.fueNormal ? 'Normal' : '-'}</td>
+                                                    <tr key={idx} className="bg-white even:bg-pink-50">
+                                                        <td className="border px-3 py-2 text-center">{idx + 1}</td>
+                                                        <td className="border px-3 py-2">{parto.fecha ? dayjs(parto.fecha).format('DD-MM-YYYY') : '-'}</td>
+                                                        <td className="border px-3 py-2">{parto.genero ?? '-'}</td>
+                                                        <td className="border px-3 py-2 text-center">{parto.abortado ? 'Sí' : 'No'}</td>
+                                                        <td className="border px-3 py-2 font-semibold">
+                                                            {parto.fueCesarea ? (
+                                                                <span className="text-red-600">Cesárea</span>
+                                                            ) : parto.fueNormal ? (
+                                                                <span className="text-green-700">Normal</span>
+                                                            ) : (
+                                                                <span className="text-gray-500">-</span>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

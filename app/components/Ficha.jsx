@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react";
-import { Dialog, DialogTitle } from "@headlessui/react";
-import { LiaTimesSolid } from "react-icons/lia";
+import { Dialog } from "@headlessui/react";
 import { CiPower } from "react-icons/ci";
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from 'react-toastify';
@@ -81,6 +80,7 @@ export default function Ficha({ pacienteId }) {
     
     // Estados para antecedentes mórbidos y medicamentos desde API
     const [antecedentesMorbidos, setAntecedentesMorbidos] = useState([]);
+    const [antecedentesMorbidosAdicionales, setAntecedentesMorbidosAdicionales] = useState("");
     const [medicamentos, setMedicamentos] = useState([]);
     const [examenes, setExamenes] = useState([]);
     const [examenesFlatted, setExamenesFlatted] = useState([]);
@@ -98,11 +98,8 @@ export default function Ficha({ pacienteId }) {
     const [otroAnticonceptivo, setOtroAnticonceptivo] = useState("");
     const [partos, setPartos] = useState([]);
     const [habitoAlimenticioLocal, setHabitoAlimenticioLocal] = useState("");
-    const [aguaCm3DiaLocal, setAguaCm3DiaLocal] = useState(0);
-    const [ejercicioHrsSemanaLocal, setEjercicioHrsSemanaLocal] = useState(0);
-    const [cigarrillosPorDiaLocal, setCigarrillosPorDiaLocal] = useState(0);
     const [higiene, setHigiene] = useState({
-        fuma: false,
+        fuma: 0,
         agua: 0,
         ejercicioSemanal: 0,
         nivelStress: 0,
@@ -132,13 +129,7 @@ export default function Ficha({ pacienteId }) {
         // Verificar si alguna especialidad es "Medicina" (mismo criterio que esMedico())
         const esMedicoTab = profesional.especialidadIds.some(esp => 
             esp.nombre && esp.nombre.toLowerCase() === 'medicina'
-        );
-        
-        console.log("🏥 TABS SEGÚN ESPECIALIDAD:", { 
-            especialidades: profesional.especialidadIds.map(e => e.nombre), 
-            esMedicoTab, 
-            tabsResultado: esMedicoTab ? 'TABS_MEDICO' : 'TABS_OTROS' 
-        });
+        );       
         
         return esMedicoTab ? TABS_MEDICO : TABS_OTROS;
     };
@@ -148,7 +139,6 @@ export default function Ficha({ pacienteId }) {
         if (!profesional || !profesional.especialidadIds || profesional.especialidadIds.length === 0) {
             return false;
         }
-        console.log("ES MEDICO?", profesional.especialidadIds, profesional.especialidadIds.some(esp => esp.nombre && esp.nombre.toLowerCase() === 'medicina'));
         return profesional.especialidadIds.some(esp => 
             esp.nombre && esp.nombre.toLowerCase() === 'medicina'
         );
@@ -193,9 +183,6 @@ export default function Ficha({ pacienteId }) {
                     
                     // Inicializar estados locales para campos que usan onBlur
                     setHabitoAlimenticioLocal(fichaData.paciente.higiene.habitoAlimenticio || "");
-                    setAguaCm3DiaLocal(fichaData.paciente.higiene.aguaCm3Dia || 0);
-                    setEjercicioHrsSemanaLocal(fichaData.paciente.higiene.ejercicioHrsSemana || 0);
-                    setCigarrillosPorDiaLocal(fichaData.paciente.higiene.cigarrillosPorDia || 0);
                 }
                 
                 // Cargar lista de antecedentes mórbidos disponibles
@@ -249,12 +236,14 @@ export default function Ficha({ pacienteId }) {
                                 });
                                 console.log("Agregado nuevo antecedente:", nombreAntecedente);
                             }
-                        });
+                        });                        
                     }
                     
                     console.log("Estado final de antecedentes:", antecedentesConEstado);
                     setAntecedentesMorbidos(antecedentesConEstado);
+                    setAntecedentesMorbidosAdicionales(fichaData.paciente?.antecedentesMorbidosAdicionales || "");
                 }
+                
                 
                 // Cargar lista de medicamentos disponibles
                 const medicamentosRes = await fetch('/api/medicamentos');
@@ -298,7 +287,13 @@ export default function Ficha({ pacienteId }) {
                         setModalAlergias(true);
                     }, 500);
                 }
-                
+
+                setPartos(
+                    (fichaData.paciente?.partos || []).map(p => ({
+                        ...p,
+                        fecha: p.fecha ? new Date(p.fecha).toISOString().slice(0, 10) : ""
+                    }))
+                );              
             } catch (error) {
                 console.error('Error cargando datos:', error);
             } finally {
@@ -379,14 +374,6 @@ export default function Ficha({ pacienteId }) {
             ).slice(0, 6)
         );
     }, [recetaInput, medicamentosReceta]);
-
-
-
-
-
-
-
-
 
     // Autocompletar medicamentos
     useEffect(() => {
@@ -487,8 +474,6 @@ export default function Ficha({ pacienteId }) {
         setLoadingHistorico(false);
     };
 
-
-
     const handleTerminarAtencion = async () => {
         setFinishing(true);
         const response = await fetch('/api/profesional/terminarAtencion', {
@@ -531,17 +516,17 @@ export default function Ficha({ pacienteId }) {
         }
     };
 
-    const guardarHigieneManuales = () => {
-        if (puedeGuardarAutomaticamente() && Object.values(higiene).some(value => value !== "" && value !== 0 && value !== false)) {
-            console.log("💾 Guardando higiene MANUALMENTE");
-            guardarAtributo("higiene", higiene);
+    const guardarHigieneManuales = (higieneData) => {
+        if (puedeGuardarAutomaticamente() && Object.values(higieneData).some(value => value !== "" && value !== 0 && value !== false)) {
+            console.log("💾 Guardando higiene MANUALMENTE", higieneData);
+            guardarAtributo("higiene", higieneData);
         }
     };
 
-    const guardarPartosManuales = () => {
-        if (puedeGuardarAutomaticamente() && partos.length > 0) {
-            console.log("💾 Guardando partos MANUALMENTE");
-            guardarAtributo("partos", partos);
+    const guardarPartosManuales = (partosData) => {
+        if (puedeGuardarAutomaticamente() && partosData.length > 0) {
+            console.log("💾 Guardando partos MANUALMENTE", partos);
+            guardarAtributo("partos", partosData);
         }
     };
 
@@ -577,7 +562,7 @@ export default function Ficha({ pacienteId }) {
                         <div className="flex-1">
                             <div className="font-bold text-lg text-[#68563c]">
                                 {paciente
-                                    ? `${paciente.nombres} ${paciente.apellidos || ""}`
+                                    ? `${(paciente.nombres + " " + paciente.apellidos) || ""}`
                                     : "Cargando..."}
                             </div>
                             <div className="text-sm text-[#66754c]">
@@ -798,6 +783,18 @@ export default function Ficha({ pacienteId }) {
                                             Agregar
                                         </button>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-[#68563c] mb-1 mt-4">
+                                            Antecedentes adicionales
+                                        </label>
+                                        <textarea
+                                            className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-40 focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                                            value={antecedentesMorbidosAdicionales}
+                                            onChange={(e) => setAntecedentesMorbidosAdicionales(e.target.value)}
+                                            onBlur={(e) => guardarAtributo("antecedentesMorbidosAdicionales", e.target.value)}
+                                            placeholder="Describa antecedentes adicionales relevantes..."
+                                        />
+                                    </div>
                                 </div>
                                 )}
 
@@ -1010,14 +1007,25 @@ export default function Ficha({ pacienteId }) {
                                                             <thead>
                                                                 <tr className="bg-[#d5c7aa]">
                                                                     <th className="border border-[#ac9164] p-2 text-left text-sm">Número</th>
+                                                                    <th className="border border-[#ac9164] p-2 text-left text-sm">Fecha</th>
                                                                     <th className="border border-[#ac9164] p-2 text-left text-sm">Género</th>
-                                                                    <th className="border border-[#ac9164] p-2 text-left text-sm">Aborto</th>
+                                                                    <th className="border border-[#ac9164] p-2 text-left text-sm">Tipo</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 {partos.map((parto, index) => (
                                                                     <tr key={index}>
-                                                                        <td className="border border-[#d5c7aa] p-2 text-sm">{parto.numero}</td>
+                                                                        <td className="border border-[#d5c7aa] p-2 text-sm">{index + 1}.</td>
+                                                                        <td className="border border-[#d5c7aa] p-2 text-sm">
+                                                                            <input type="date" 
+                                                                                className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                                                                value={parto.fecha} onChange={(e) => {
+                                                                                const nuevos = [...partos];
+                                                                                nuevos[index].fecha = new Date(e.target.value);
+                                                                                setPartos(nuevos);
+                                                                                guardarPartosManuales(nuevos);
+                                                                            }} />
+                                                                        </td>
                                                                         <td className="border border-[#d5c7aa] p-2">
                                                                             <select 
                                                                                 value={parto.genero}
@@ -1025,26 +1033,32 @@ export default function Ficha({ pacienteId }) {
                                                                                     const nuevos = [...partos];
                                                                                     nuevos[index].genero = e.target.value;
                                                                                     setPartos(nuevos);
+                                                                                    guardarPartosManuales(nuevos);
                                                                                 }}
                                                                                 className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                                             >
                                                                                 <option value="">Seleccionar</option>
-                                                                                <option value="niño">Niño</option>
-                                                                                <option value="niña">Niña</option>
-                                                                                <option value="no sabe">No sabe</option>
+                                                                                <option value="V">Varón</option>
+                                                                                <option value="N">Niña</option>
+                                                                                <option value="X">No sabe</option>
                                                                             </select>
                                                                         </td>
                                                                         <td className="border border-[#d5c7aa] p-2">
-                                                                            <input 
-                                                                                type="checkbox" 
-                                                                                checked={parto.aborto}
+                                                                            <select 
+                                                                                value={parto.genero}
                                                                                 onChange={(e) => {
                                                                                     const nuevos = [...partos];
-                                                                                    nuevos[index].aborto = e.target.checked;
+                                                                                    nuevos[index].tipo = e.target.value;
                                                                                     setPartos(nuevos);
+                                                                                    guardarPartosManuales(nuevos);
                                                                                 }}
-                                                                                className="text-[#ac9164]"
-                                                                            />
+                                                                                className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                                                            >
+                                                                                <option value="">Seleccionar</option>
+                                                                                <option value="N">Natural</option>
+                                                                                <option value="C">Cesárea</option>
+                                                                                <option value="A">Aborto</option>
+                                                                            </select>
                                                                         </td>
                                                                     </tr>
                                                                 ))}
@@ -1065,15 +1079,20 @@ export default function Ficha({ pacienteId }) {
                                                     Higiene
                                                 </summary>
                                                 <div className="mt-4 space-y-4">
-                                                    <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                                         <div className="flex items-center gap-2">
                                                             <input 
                                                                 type="checkbox" 
                                                                 checked={higiene.fuma}
                                                                 onChange={(e) => {
-                                                                    setHigiene({...higiene, fuma: e.target.checked});
-                                                                    // Guardado manual después de cambio
-                                                                    setTimeout(() => guardarHigieneManuales(), 100);
+                                                                    const checked = e.target.checked;
+                                                                    if(checked) {
+                                                                        setHigiene({...higiene, fuma: 1 });
+                                                                        guardarHigieneManuales({...higiene, fuma: 1 });
+                                                                    } else {
+                                                                        setHigiene({...higiene, fuma: 0 });
+                                                                        guardarHigieneManuales({...higiene, fuma: 0 });
+                                                                    }                                                                    
                                                                 }}
                                                                 className="text-[#ac9164]"
                                                             />
@@ -1083,9 +1102,9 @@ export default function Ficha({ pacienteId }) {
                                                                     <input 
                                                                         type="number" 
                                                                         min="0"
-                                                                        value={cigarrillosPorDiaLocal}
-                                                                        onChange={(e) => setCigarrillosPorDiaLocal(parseInt(e.target.value) || 0)}
-                                                                        onBlur={(e) => guardarAtributo("cigarrillosPorDia", parseInt(e.target.value) || 0)}
+                                                                        value={higiene.fuma}
+                                                                        onChange={(e) => setHigiene({...higiene, fuma: parseInt(e.target.value)})}
+                                                                        onBlur={(e) => guardarAtributo("fuma", parseInt(e.target.value))}
                                                                         className="w-16 border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                                     />
                                                                     <span className="text-xs text-[#8e9b6d]">por día</span>
@@ -1097,9 +1116,9 @@ export default function Ficha({ pacienteId }) {
                                                             <input 
                                                                 type="number" 
                                                                 min="0"
-                                                                value={aguaCm3DiaLocal}
-                                                                onChange={(e) => setAguaCm3DiaLocal(parseInt(e.target.value) || 0)}
-                                                                onBlur={(e) => guardarAtributo("aguaCm3Dia", parseInt(e.target.value) || 0)}
+                                                                value={higiene.agua}
+                                                                onChange={(e) => setHigiene({...higiene, agua: parseInt(e.target.value)})}
+                                                                onBlur={(e) => guardarAtributo("agua", parseInt(e.target.value))}
                                                                 className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                             />
                                                         </div>
@@ -1109,9 +1128,9 @@ export default function Ficha({ pacienteId }) {
                                                                 type="number" 
                                                                 min="0"
                                                                 step="0.5"
-                                                                value={ejercicioHrsSemanaLocal}
-                                                                onChange={(e) => setEjercicioHrsSemanaLocal(parseFloat(e.target.value) || 0)}
-                                                                onBlur={(e) => guardarAtributo("ejercicioHrsSemana", parseFloat(e.target.value) || 0)}
+                                                                value={higiene.ejercicioSemanal}
+                                                                onChange={(e) => setHigiene({...higiene, ejercicioSemanal: parseFloat(e.target.value)})}
+                                                                onBlur={(e) => guardarAtributo("ejercicioSemanal", parseFloat(e.target.value))}
                                                                 className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                                             />
                                                         </div>
@@ -1139,7 +1158,7 @@ export default function Ficha({ pacienteId }) {
                                                                             onClick={() => {
                                                                                 setHigiene({...higiene, nivelStress: index});
                                                                                 // Guardado manual después de cambio
-                                                                                setTimeout(() => guardarHigieneManuales(), 100);
+                                                                                guardarHigieneManuales({...higiene, nivelStress: index});
                                                                             }}
                                                                             className={`flex-1 p-3 border-2 rounded-lg transition-all ${
                                                                                 isSelected ? selectedColors[index] : colors[index]
@@ -1176,7 +1195,7 @@ export default function Ficha({ pacienteId }) {
                                                                             onClick={() => {
                                                                                 setHigiene({...higiene, calidadDormir: index});
                                                                                 // Guardado manual después de cambio
-                                                                                setTimeout(() => guardarHigieneManuales(), 100);
+                                                                                setTimeout(() => guardarHigieneManuales({...higiene, calidadDormir: index}), 250);
                                                                             }}
                                                                             className={`flex-1 p-3 border-2 rounded-lg transition-all ${
                                                                                 isSelected ? selectedColors[index] : colors[index]
@@ -1194,8 +1213,12 @@ export default function Ficha({ pacienteId }) {
                                                         <label className="text-sm text-[#68563c]">Hábito alimenticio</label>
                                                         <textarea
                                                             value={habitoAlimenticioLocal}
-                                                            onChange={(e) => setHabitoAlimenticioLocal(e.target.value)}
-                                                            onBlur={(e) => guardarAtributo("habitoAlimenticio", e.target.value)}
+                                                            onChange={(e) => {
+                                                                setHabitoAlimenticioLocal(e.target.value);
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                guardarHigieneManuales({...higiene, habitoAlimenticio: e.target.value})                                                                
+                                                            }}
                                                             className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-20 focus:border-[#ac9164] text-sm"
                                                             placeholder="Describe los hábitos alimenticios del paciente..."
                                                         />
