@@ -387,11 +387,23 @@ export default function Panoramica({ session }) {
                                 onDragEnd={onDragEnd}
                                 onTouchStart={e => {
                                     e.stopPropagation();
-                                    onDragStart(arribo);
+                                    setDraggedPaciente(arribo);
+                                }}
+                                onTouchMove={e => {
+                                    const touch = e.touches[0];
+                                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                                    // Opcional: puedes agregar una clase especial a los boxes para identificarlos
+                                    if (target && target.closest('.box-droppable')) {
+                                        const boxId = target.closest('.box-droppable').getAttribute('data-box-id');
+                                        const box = boxes.find(b => b._id === boxId);
+                                        if (box && boxLibre(box)) {
+                                            onDropBox(box);
+                                            setDraggedPaciente(null);
+                                        }
+                                    }
                                 }}
                                 onTouchEnd={e => {
-                                    e.stopPropagation();
-                                    onDragEnd();
+                                    setDraggedPaciente(null);
                                 }}
                                 style={{ opacity: draggedPaciente?.id === arribo.id ? 0.5 : 1 }}
                             >
