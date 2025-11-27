@@ -1,21 +1,23 @@
-/** @type {import('next').NextConfig} */
-const isProd = process.env.NODE_ENV === 'production';
-
-const nextConfig = {
-  typescript: {
-    // Ignorar errores de TypeScript durante build (solo para desarrollo)
-    ignoreBuildErrors: false,
-  },  
-  typedRoutes: false, // Deshabilitar rutas tipadas si causan problemas  
-  output: 'standalone',
+module.exports = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      }
+    ]
+  },
 }
-
-// const withPWA = require('next-pwa')({
-//   dest: 'public',
-//   register: true,
-//   skipWaiting: true,
-//   disable: !isProd, // 👈 desactiva en desarrollo
-// });
-
-// module.exports = withPWA(nextConfig);
-module.exports = nextConfig;
