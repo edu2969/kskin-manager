@@ -4,16 +4,15 @@ import { useEffect, useState, useRef } from "react";
 import { Dialog } from "@headlessui/react";
 import { CiPower } from "react-icons/ci";
 import { useRouter } from "next/navigation";
-import { ToastContainer, toast } from 'react-toastify';
 import Loader from "./Loader";
 import HistoricoFichas from "./HistoricoFichas";
-import 'react-toastify/dist/ReactToastify.css';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import { FaCaretSquareRight } from "react-icons/fa";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { socket } from "@/lib/socket-client";
+import Toaster, { toast } from "react-hot-toast";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 
@@ -1485,7 +1484,6 @@ export default function Ficha({ pacienteId }) {
                     <CiPower className="text-3xl text-[#68563c]" />
                 </button>
             </div>
-            <ToastContainer />
 
             {/* Modal de Alerta de Alergias */}
             <Dialog open={modalAlergias} onClose={() => setModalAlergias(false)} className="fixed z-50 inset-0 flex items-center justify-center">
@@ -1559,6 +1557,7 @@ export default function Ficha({ pacienteId }) {
                     <Loader texto="Finalizando la atención..." />
                 </div>
             </div>}
+            <Toaster />
         </div>
     );
 }

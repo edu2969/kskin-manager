@@ -14,8 +14,7 @@ import { RiDragDropLine, RiUserStarFill } from "react-icons/ri";
 import { socket } from "@/lib/socket-client";
 import { useOnVisibilityChange } from '@/app/components/uix/useOnVisibilityChange';
 import RutInput from '@/app/components/uix/RutInput';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from "next/navigation";
 import Loader from "../Loader";
 import { LuDoorClosed, LuDoorOpen, LuSearch } from "react-icons/lu";
@@ -37,6 +36,7 @@ export default function Panoramica({ session }) {
     const [registrandoArribo, setRegistrandoArribo] = useState(false);
     const [confirmandoAsignacion, setConfirmandoAsignacion] = useState(false);
     const router = useRouter();
+    const [boxSelected, setBoxSelected] = useState(null);
 
     // Histórico de paciente modal states
     const [modalHistorico, setModalHistorico] = useState(false);
@@ -112,13 +112,12 @@ export default function Panoramica({ session }) {
     };
 
     // Drag & Drop handlers
-    const onDragStart = (paciente) => setDraggedPaciente(paciente);
     const onDragEnd = () => setDraggedPaciente(null);
 
-    const onDropBox = (box) => {
-        console.log("DROP", { box, draggedPaciente });
-        if (!draggedPaciente || !boxLibre(box)) return;
-        setModal({ open: true, paciente: draggedPaciente.pacienteId, box, minutos: 0, horas: 1 });
+    const onDropBox = (box, paciente) => {
+        console.log("DROP", { box, paciente });
+        if (!paciente || !boxLibre(box)) return;
+        setModal({ open: true, paciente: paciente.pacienteId, box, minutos: 0, horas: 1 });
     };
 
     // Confirmar asignación
@@ -333,47 +332,7 @@ export default function Panoramica({ session }) {
         const tiempoEstimado = box.ocupacion?.tiempoEstimado || 60;
         const finEstimado = inicioTime + (tiempoEstimado * 60 * 1000);
         return Date.now() > finEstimado;
-    }
-
-    useEffect(() => {
-        function touchHandler(event) {
-            var touches = event.changedTouches,
-                first = touches[0],
-                type = "";
-            switch (event.type) {
-                case "touchstart": type = "mousedown"; break;
-                case "touchmove": type = "mousemove"; break;
-                case "touchend": type = "mouseup"; break;
-                default: return;
-            }
-
-            var simulatedEvent = document.createEvent("MouseEvent");
-            simulatedEvent.initMouseEvent(type, true, true, window, 1,
-                first.screenX, first.screenY,
-                first.clientX, first.clientY, false,
-                false, false, false, 0, null);
-
-            first.target.dispatchEvent(simulatedEvent);
-            event.preventDefault();
-        }
-
-        function initTouchToMouse() {
-            document.addEventListener("touchstart", touchHandler, true);
-            document.addEventListener("touchmove", touchHandler, true);
-            document.addEventListener("touchend", touchHandler, true);
-            document.addEventListener("touchcancel", touchHandler, true);
-        }
-
-        initTouchToMouse();
-
-        // Limpieza al desmontar
-        return () => {
-            document.removeEventListener("touchstart", touchHandler, true);
-            document.removeEventListener("touchmove", touchHandler, true);
-            document.removeEventListener("touchend", touchHandler, true);
-            document.removeEventListener("touchcancel", touchHandler, true);
-        };
-    }, []);
+    }    
 
     // UI
     return (
@@ -418,33 +377,17 @@ export default function Panoramica({ session }) {
                         {!loading && arribos.filter(a => a.fechaLlegada).length === 0 && (
                             <div className="text-center text-gray-400 mt-8">Sin pacientes en espera</div>
                         )}
-                        {arribos.filter(a => a.fechaLlegada).map((arribo, idx) => (
-                            <div
+                        {arribos.filter(a => a.fechaLlegada).map((arribo, idx) => (<div
                                 key={`paciente-${idx}`}
-                                className={`flex items-center gap-2 rounded-lg px-3 py-2 shadow-sm cursor-grab active:cursor-grabbing transition-all border border-pink-200 bg-white hover:bg-pink-50`}
-                                draggable={role === USER_ROLE.profesional}
-                                onDragStart={() => onDragStart(arribo)}
-                                onDragEnd={onDragEnd}
-                                onTouchStart={e => {
-                                    e.stopPropagation();
+                                className={`flex items-center gap-2 rounded-lg px-3 py-2 shadow-sm cursor-grab active:cursor-grabbing transition-all border border-pink-200 ${arribo.pacienteId === draggedPaciente?.pacienteId ? "bg-pink-500 text-white" : "bg-white hover:bg-pink-50"}`}
+                                onClick={() => {
                                     setDraggedPaciente(arribo);
-                                }}
-                                onTouchMove={e => {
-                                    const touch = e.touches[0];
-                                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                                    // Opcional: puedes agregar una clase especial a los boxes para identificarlos
-                                    if (target && target.closest('.box-droppable')) {
-                                        const boxId = target.closest('.box-droppable').getAttribute('data-box-id');
-                                        const box = boxes.find(b => b._id === boxId);
-                                        if (box && boxLibre(box)) {
-                                            onDropBox(box);
-                                            setDraggedPaciente(null);
-                                        }
-                                    }
-                                }}
-                                onTouchEnd={e => {
-                                    setDraggedPaciente(null);
-                                }}
+                                    if(!boxSelected) {
+                                        toast.success("Paciente seleccionado para asignar box");
+                                    } else {
+                                        onDropBox(boxSelected, arribo);              
+                                    }                                    
+                                }}                                
                                 style={{ opacity: draggedPaciente?.id === arribo.id ? 0.5 : 1 }}
                             >
                                 {arribo.pacienteId?.genero === "F" && (
@@ -457,8 +400,7 @@ export default function Panoramica({ session }) {
                                     <FaPersonCircleQuestion className="text-2xl text-neutral-500" />
                                 )}
                                 <span className="font-medium">{arribo.pacienteId?.nombres} {arribo.pacienteId?.apellidos?.split(" ")[0]}</span>
-                            </div>
-                        ))}
+                            </div>))}
                     </div>
                 </div>}
                 {loading && <div className="rounded-xl shadow-lg bg-white/80 h-full flex flex-col items-center justify-center">
@@ -470,26 +412,18 @@ export default function Panoramica({ session }) {
             <section className="flex-1 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-8 content-start">
                 {boxes.map((box, idx) => (
                     <div
-                        key={box._id}
+                        key={`box_${idx}`}
                         className={`relative rounded-xl shadow-lg flex flex-col items-center justify-center h-40 transition-all
                             ${boxLibre(box) ? "text-[#66754c] bg-[#f6eedb] border-2 border-dashed border-[#d5c7aa]" : "text-white bg-[#8c966d] border-2 border-[#d5c7aa]"}
                             ${draggedPaciente && boxLibre(box) ? "ring-2 ring-pink-300" : ""}
+                            ${boxSelected?._id === box._id ? "bg-pink-200 text-pink-800" : ""}
                         `}
-                        onDragOver={(e) => {
-                            if (boxLibre(box)) e.preventDefault();
-                        }}
-                        onDrop={(e) => {
-                            e.preventDefault();
-                            onDropBox(box);
-                        }}
-                        onTouchMove={e => {
-                            // Detecta si el dedo está sobre el box y ejecuta drop
-                            const touch = e.touches[0];
-                            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                            if (target && target.closest(`[data-box-id='${box._id}']`)) {
-                                onDropBox(box);
+                        onClick={() => {                            
+                            setBoxSelected(box);
+                            if(draggedPaciente) {
+                                onDropBox(box, draggedPaciente);
                                 onDragEnd();
-                            }
+                            } else toast.success("Box seleccionado para asignar paciente");
                         }}
                         data-box-id={box._id}
                     >
@@ -542,7 +476,7 @@ export default function Panoramica({ session }) {
             {/* Modal de confirmación */}
             <Dialog open={modal.open} onClose={() => setModal({ open: false, paciente: null, box: null })} className="fixed z-50 inset-0 flex items-center justify-center">
                 <div className="fixed inset-0 bg-black/30" />
-                <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-128">
+                <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-[400px]">
                     <button
                         className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
                         onClick={() => setModal({ open: false, paciente: null, box: null })}
@@ -619,7 +553,11 @@ export default function Panoramica({ session }) {
                         </button>
                         <button
                             className="flex-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 transition disabled:opacity-50"
-                            onClick={() => setModal({ open: false, paciente: null, box: null })}
+                            onClick={() => {
+                                setModal({ open: false, paciente: null, box: null });
+                                setDraggedPaciente(null);
+                                setBoxSelected(null);
+                            }}
                             disabled={confirmandoAsignacion}
                         >
                             Cancelar
@@ -875,7 +813,7 @@ export default function Panoramica({ session }) {
                 {/* SVG CiPower logo (placeholder) */}
                 <CiPower className="text-3xl text-[#68563c]" />
             </button>
-            <ToastContainer />
+            <Toaster />
         </main>
     );
 }
