@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -11,9 +12,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "KSking Manager",
   description: "Gestión de pacientes y recursos para KSkin",
+  manifest: "/manifest.json"
 };
 
 export default function RootLayout({
