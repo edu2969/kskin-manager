@@ -1,4 +1,5 @@
 module.exports = {
+  output: 'standalone',
   async headers() {
     return [
       {
