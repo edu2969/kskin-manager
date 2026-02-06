@@ -807,7 +807,7 @@ export default function Panoramica({ session }) {
                 title="CiPower"
                 onClick={async () => {
                     signOut({ redirect: false }).then(() => {
-                        router.push('/logingOut');
+                        router.push('/logout');
                     });
                 }}>
                 {/* SVG CiPower logo (placeholder) */}

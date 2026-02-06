@@ -2,15 +2,14 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Loader from "../Loader";
+import Loader from "./Loader";
 import { IoAlertOutline } from "react-icons/io5";
-
-// filepath: d:/git/bioxspa/components/uix/LoginOut.jsx
 
 async function waitForSessionToBeUnauthenticated(timeoutMs = 9000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
         const res = await fetch("/api/auth/session");
+        if (!res.ok) return true;
         const session = await res.json();
         console.log("Esperando que la sesión se cierre", session);
         if (!session?.user) { 

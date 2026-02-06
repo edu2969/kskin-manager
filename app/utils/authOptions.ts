@@ -5,6 +5,7 @@ import User from "@/models/user";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
+  debug: true,
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -13,6 +14,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log("ENTRO A AUTHORIZE");
         const { email, password } = credentials as { email: string; password: string };
         try {
           await connectMongoDB();
