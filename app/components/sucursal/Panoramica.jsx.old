@@ -21,7 +21,7 @@ import { LuDoorClosed, LuDoorOpen, LuSearch } from "react-icons/lu";
 import { signOut } from 'next-auth/react';
 import HistoricoFichas from "../HistoricoFichas"
 
-export default function Panoramica({ session }) {
+export default function _Panoramica({ session }) {
     const [nuevoPacienteModal, setNuevoPacienteModal] = useState(false);
     const [rutBusqueda, setRutBusqueda] = useState("");
     const [pacienteEncontrado, setPacienteEncontrado] = useState(null);
@@ -111,11 +111,7 @@ export default function Panoramica({ session }) {
         }
     };
 
-    // Drag & Drop handlers
-    const onDragEnd = () => setDraggedPaciente(null);
-
-    const onDropBox = (box, paciente) => {
-        console.log("DROP", { box, paciente });
+    const asignarABox = (box, paciente) => {
         if (!paciente || !boxLibre(box)) return;
         setModal({ open: true, paciente: paciente.pacienteId, box, minutos: 0, horas: 1 });
     };
@@ -381,11 +377,11 @@ export default function Panoramica({ session }) {
                                 key={`paciente-${idx}`}
                                 className={`flex items-center gap-2 rounded-lg px-3 py-2 shadow-sm cursor-grab active:cursor-grabbing transition-all border border-pink-200 ${arribo.pacienteId === draggedPaciente?.pacienteId ? "bg-pink-500 text-white" : "bg-white hover:bg-pink-50"}`}
                                 onClick={() => {
-                                    setDraggedPaciente(arribo);
+                                    setArriboSeleccionado(arribo);
                                     if(!boxSelected) {
                                         toast.success("Paciente seleccionado para asignar box");
                                     } else {
-                                        onDropBox(boxSelected, arribo);              
+                                        asignarABox(boxSelected, arribo);              
                                     }                                    
                                 }}                                
                                 style={{ opacity: draggedPaciente?.id === arribo.id ? 0.5 : 1 }}
@@ -421,8 +417,7 @@ export default function Panoramica({ session }) {
                         onClick={() => {                            
                             setBoxSelected(box);
                             if(draggedPaciente) {
-                                onDropBox(box, draggedPaciente);
-                                onDragEnd();
+                                asignarABox(box, draggedPaciente);
                             } else toast.success("Box seleccionado para asignar paciente");
                         }}
                         data-box-id={box._id}
