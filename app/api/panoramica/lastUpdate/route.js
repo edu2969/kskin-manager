@@ -14,8 +14,8 @@ export async function GET() {
     }
 
     const user = await User.findOne({ _id: session.user.id });
-
-    if (!user || user.role !== USER_ROLE.profesional || user.role !== USER_ROLE.recepcion) {
+    
+    if (!user || (user.role !== USER_ROLE.profesional && user.role !== USER_ROLE.recepcionista)) {
         return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
 

@@ -1,35 +1,33 @@
 import { useState } from "react";
 import { USER_ROLE } from "@/app/utils/constants";
-import { BsFillPersonFill } from "react-icons/bs";
+import { BsFileEarmarkMedicalFill, BsFillPersonFill } from "react-icons/bs";
 import { RiDragDropLine, RiUserStarFill } from "react-icons/ri";
 import { AiOutlineMan, AiOutlineWoman } from "react-icons/ai";
 import { FaPersonCircleQuestion } from "react-icons/fa6";
+import { GiArchiveRegister } from "react-icons/gi";
 import toast from "react-hot-toast";
 import Loader from "../Loader";
-import { IArribo, IPaciente } from "./types";
-import ModalNuevoPaciente from "./ModalNuevoPaciente";
-import { socket } from "@/lib/socket-client";
-import ModalHistorico from "./ModalHistorico";
+import { IArribo, IBox, IPaciente } from "./types";
+import ModalHistorico from "@/app/components/modals/ModalHistorico";
+import ModalRegistroPaciente from "@/app/components/modals/ModalRegistroPaciente";
 
 export default function Recepcion({
-    role, nombreProfesional, arribos, setArribo, onClose
+    role, arribos, nombreProfesional, pacienteSeleccionado, setPacienteSeleccionado, boxSeleccionado, solicitarReserva
 }: {
     role: number;
+    arribos: IArribo[];    
     nombreProfesional: string;
-    arribos: IArribo[];
-    setArribo: React.Dispatch<React.SetStateAction<IArribo | null>>;
-    onClose: () => void;
+    pacienteSeleccionado: IPaciente | null;
+    setPacienteSeleccionado: React.Dispatch<React.SetStateAction<IPaciente | null>>;
+    boxSeleccionado: IBox | null;
+    solicitarReserva: (paciente: IPaciente | null, box: IBox | null) => void;
 }) {
-    const [paciente, setPaciente] = useState<IPaciente | null>(null);
     const [loading, setLoading] = useState(false);
-    const [registrandoArribo, setRegistrandoArribo] = useState(false);
     const [showNuevoPaciente, setShowNuevoPaciente] = useState(false);
-    const [rutBusqueda, setRutBusqueda] = useState("");
-    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);    
     const [showModalHistorico, setShowModalHistorico] = useState<string | boolean>(false);
-        
+
     const registrarArribo = async (paciente: IPaciente) => {
-        setRegistrandoArribo(true);
+        setLoading(true);
         try {
             const body = !paciente._id
                 ? {
@@ -57,66 +55,70 @@ export default function Recepcion({
 
             const data = await res.json();
             if (res.ok) {
-                setPaciente(null);
-                setRutBusqueda("");
+                setPacienteSeleccionado(null);
             } else {
                 toast.error(data.error || "Error al registrar arribo");
             }
         } catch (err) {
             toast.error("Error de red al registrar arribo");
         } finally {
-            setRegistrandoArribo(false);
-            socket.emit("update-centrointegral");
+            setLoading(false);
         }
     };
 
-    return (<section className="w-80 h-full p-4">
-        {!loading && <div className="rounded-xl shadow-lg bg-white/80 p-4 h-full flex flex-col">
-            <div className="flex items-center mb-4">
-                {role === USER_ROLE.recepcionista && <BsFillPersonFill className="text-pink-400 text-2xl mr-2" />}
-                {role === USER_ROLE.profesional && <RiUserStarFill className="text-pink-400 text-2xl mr-2" />}
-                <span className="font-bold text-lg">{role === USER_ROLE.recepcionista ? "Recepcionista" : ("Bienvenida " + nombreProfesional)}</span>
-                <span className="ml-auto text-xs text-gray-500">
-                    {arribos.length} / 20
-                </span>
+    const handleSeleccionarPaciente = (arribo: IArribo) => {
+        if(role !== USER_ROLE.profesional) return;
+        setPacienteSeleccionado(arribo.pacienteId);
+        solicitarReserva(arribo.pacienteId, boxSeleccionado);
+    }
+
+    return (<section className="w-2/5 md:w-80 h-full p-0.5 md:p-4">
+        {!loading && <div className="rounded-xl shadow-lg bg-white/80 p-1 md:p-4 h-full flex flex-col">
+            <div className="flex flex-col items-center mb-4">
+                <p className="text-lg text-center">{role === USER_ROLE.recepcionista ? "Recepcionista" : <b>{"Bienvenida " + nombreProfesional}</b>}</p>                
+                <div className="flex">
+                    {role === USER_ROLE.recepcionista && <BsFillPersonFill className="text-pink-400 text-2xl mr-2" />}
+                    {role === USER_ROLE.profesional && <RiUserStarFill className="text-pink-400 text-2xl mr-2" />}
+                    <p className="font-bolder ml-auto text-xs text-gray-800 bg-pink-200 px-2 py-0.5 rounded-md">
+                        {arribos.length} / 20
+                    </p>
+                </div>                
             </div>
             {/* Link único para ver histórico de paciente (solo profesional) */}
             {role === USER_ROLE.profesional && (
-                <div className="mb-4">
+                <div className="mb-1">
                     <button
-                        className="px-3 py-2 rounded-full bg-pink-200 hover:bg-pink-300 text-pink-800 font-semibold shadow transition"
+                        className="mb-4 px-4 pt-2 pb-1 md:px-3 md:py-2 rounded-xl bg-[#66754c] hover:bg-[#8c9b6d] text-white font-semibold shadow-md shadow-neutral-400 transition"
                         onClick={() => setShowModalHistorico('buscar')}
                     >
-                        Ver histórico de paciente
+                        <BsFileEarmarkMedicalFill size="3rem" className="m-auto"/>
+                        <p className="text-center">Ver histórico de paciente</p>
                     </button>
                 </div>
             )}
-            {arribos.filter(a => a.fechaLlegada).length > 0 && role === USER_ROLE.profesional && <div className="flex rounded p-2 text-gray-400 bg-gray-100 mb-2">
+            {arribos.filter(a => a.fechaLlegada).length > 0 && role === USER_ROLE.profesional && <div className="flex rounded p-1 md:p-2 text-gray-400 bg-gray-100 mb-2">
                 <RiDragDropLine size="4rem" />
-                <span className="px-2 text-sm">Selecciona el paciente y luego el box en dónde lo atenderás.</span>
+                <span className="px-2 text-sm">Selecciona su paciente y el box</span>
             </div>}
-            {role === USER_ROLE.recepcionista && <button
-                className="mb-4 px-3 py-2 rounded-full bg-[#66754c] hover:bg-[#8c9b6d] text-white font-semibold shadow-md shadow-neutral-400 transition"
+            {role === USER_ROLE.recepcionista && 
+            <button className="mb-4 pl-4 py-1 md:px-3 md:py-2 rounded-xl bg-[#66754c] hover:bg-[#8c9b6d] text-white font-semibold shadow-md shadow-neutral-400 transition"
                 onClick={() => {
-                    setRutBusqueda("");
-                    setPacienteEncontrado(null);
                     setShowNuevoPaciente(true);
                 }}
             >
-                + Recibir paciente
+                <div className="flex items-center gap-3 justify-center">
+                    <GiArchiveRegister size="2rem"/>
+                    <p className="text-left">Recibir paciente</p>
+                </div>                
             </button>}
-            <div className="flex flex-col gap-2 overflow-y-auto">
+            <div className="flex flex-col gap-0.5 md:gap-2 overflow-y-auto">
                 {!loading && arribos.filter(a => a.fechaLlegada).length === 0 && (
                     <div className="text-center text-gray-400 mt-8">Sin pacientes en espera</div>
                 )}
                 {arribos.filter(a => a.fechaLlegada).map((arribo, idx) => (<div
                     key={`paciente-${idx}`}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 shadow-sm cursor-grab active:cursor-grabbing transition-all border border-pink-200 ${arribo.pacienteId._id === paciente?._id ? "bg-pink-500 text-white" : "bg-white hover:bg-pink-50"}`}
-                    onClick={() => {
-                        setArribo(arribo);                        
-                        toast.success("Paciente seleccionado para asignar box");                        
-                    }}
-                    style={{ opacity: paciente?._id === arribo._id ? 0.5 : 1 }}
+                    className={`flex items-center gap-0.5 md:gap-2 rounded-lg px-1 md:px-3 py-1 md:py-2 shadow-sm cursor-grab border border-pink-200 ${(arribo?.pacienteId?._id === pacienteSeleccionado?._id) ? "bg-pink-300 text-white" : "bg-pink-100 text-gray-500"}`}
+                    onClick={() => handleSeleccionarPaciente(arribo)}
                 >
                     {arribo.pacienteId?.genero === "F" && (
                         <AiOutlineWoman className="text-2xl text-pink-500" />
@@ -135,10 +137,11 @@ export default function Recepcion({
             <Loader texto="Cargando..." />
         </div>}        
         
-        <ModalNuevoPaciente show={showNuevoPaciente}
-            setPaciente={setPaciente}
-            onClose={() => setShowNuevoPaciente(false)} />
-
+        <ModalRegistroPaciente show={showNuevoPaciente}
+            registrarArribo={registrarArribo}
+            onClose={() => {
+                setShowNuevoPaciente(false);                
+            }} />
 
         <ModalHistorico show={showModalHistorico}
             setShow={setShowModalHistorico}

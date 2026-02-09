@@ -2,17 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CiPower } from "react-icons/ci";
-import { socket } from "@/lib/socket-client";
 import { useOnVisibilityChange } from '@/app/components/uix/useOnVisibilityChange';
-import toast, { Toaster } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { useRouter } from "next/navigation";
 import { signOut } from 'next-auth/react';
-import ModalHistorico from "./ModalHistorico";
 import Recepcion from "./Recepcion";
 import Boxes from "./Boxes";
-import ModalConfirmacionReserva from "./ModalConfirmacionReserva";
+import ModalConfirmacionReserva from "../modals/ModalConfirmacionReserva";
 import { Session } from 'next-auth';
 import { IBox, IPaciente, IArribo } from "./types";
+import { USER_ROLE } from "@/app/utils/constants";
+import toast from "react-hot-toast";
 
 export default function Panoramica({ session }: { session: Session }) {
     const [pacienteSeleccionado, setPacienteSeleccionado] = useState<IPaciente | null>(null);
@@ -26,18 +26,7 @@ export default function Panoramica({ session }: { session: Session }) {
     const [lastUpdate, setLastUpdate] = useState(new Date());
 
     const [role, setRole] = useState(session?.user?.role || "??");
-    const timers = useRef<Record<string, NodeJS.Timeout>>({});
     const router = useRouter();
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            // Forzar re-render cada segundo para actualizar contadores
-            setBoxes(prev => [...prev]);
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, []);
-
 
     const fetchVistaPanoramica = async () => {
         setLoading(true);
@@ -49,51 +38,10 @@ export default function Panoramica({ session }: { session: Session }) {
         console.log("BOXES", data.boxes);
         setLoading(false);
     };
-
-    useEffect(() => {
-        socket.on("update-centrointegral", (data: any) => {
-            console.log(">>>> Update centrointegral", data, session);
-            fetchVistaPanoramica();
-        });
-
-        return () => {
-            socket.off("update-centrointegral");
-        };
-    }, [session, fetchVistaPanoramica]);
-
+   
     useEffect(() => {
         if (session?.user?.role) setRole(session.user.role);
-    }, [session]);
-
-    useEffect(() => {
-        setRole(session?.user?.role || -1);
-        // Verifica si hay sesión y el socket está conectado
-        if (session?.user?.id && socket.connected) {
-            console.log("Re-uniendo a room-centrointegral después de posible recarga");
-            socket.emit("join-room", {
-                room: "room-centrointegral",
-                userId: session.user.id
-            });
-        }
-
-        // Evento para manejar reconexiones del socket
-        const handleReconnect = () => {
-            if (session?.user?.id) {
-                console.log("Socket reconectado, uniendo a sala nuevamente");
-                socket.emit("join-room", {
-                    room: "room-centrointegral",
-                    userId: session.user.id
-                });
-            }
-        };
-
-        // Escucha el evento de reconexión
-        socket.on("connect", handleReconnect);
-
-        return () => {
-            socket.off("connect", handleReconnect);
-        };
-    }, [session]);
+    }, [session]);    
 
     useEffect(() => {
         const fetchAll = async () => {
@@ -126,81 +74,93 @@ export default function Panoramica({ session }: { session: Session }) {
             .catch(() => { });
     });
 
-    const onCloseModalNuevoPaciente = () => {
-        setPacienteSeleccionado(null);
-        setBoxSeleccionado(null);
-    }   
-
     const nombreProfesional = (email: string) => {
         if (!email) return "";
         const nombre = email.split("@")[0];
         return nombre.charAt(0).toUpperCase() + nombre.slice(1);
     }
 
-    
+    const timers = useRef<Record<string, NodeJS.Timeout>>({});        
         
-        const iniciarProgreso = (boxId: string) => {
-            if (boxes === null) return;
-            if (timers.current[boxId]) clearInterval(timers.current[boxId]);
+    const iniciarProgreso = (boxId: string) => {
+        if (boxes === null) return;
+        if (timers.current[boxId]) clearInterval(timers.current[boxId]);
+        setBoxes((prev) =>
+            prev.map((b) =>
+                b._id === boxId
+                    ? { ...b, progreso: 0 }
+                    : b
+            )
+        );
+        let duracion = boxes.find((b) => b._id === boxId)?.ocupacion?.tiempoEstimado || 60;
+        console.log("Iniciando progreso box", boxId, "duracion", duracion);
+        let progreso = 0;
+        timers.current[boxId] = setInterval(() => {
+            progreso += 1;
             setBoxes((prev) =>
                 prev.map((b) =>
                     b._id === boxId
-                        ? { ...b, progreso: 0 }
+                        ? { ...b, progreso: progreso / duracion }
                         : b
                 )
             );
-            let duracion = boxes.find((b) => b._id === boxId)?.ocupacion?.tiempoEstimado || 60;
-            console.log("Iniciando progreso box", boxId, "duracion", duracion);
-            let progreso = 0;
-            timers.current[boxId] = setInterval(() => {
-                progreso += 1;
+            if (progreso >= duracion) {
+                clearInterval(timers.current[boxId]);
                 setBoxes((prev) =>
                     prev.map((b) =>
                         b._id === boxId
-                            ? { ...b, progreso: progreso / duracion }
+                            ? { ...b, ocupado: false, paciente: null, progreso: 0 }
                             : b
                     )
                 );
-                if (progreso >= duracion) {
-                    clearInterval(timers.current[boxId]);
-                    setBoxes((prev) =>
-                        prev.map((b) =>
-                            b._id === boxId
-                                ? { ...b, ocupado: false, paciente: null, progreso: 0 }
-                                : b
-                        )
-                    );
-                }
-            }, 1000);
-        };
+            }
+        }, 1000);
+    };
+
+    const handleSolicitarReserva = (paciente: IPaciente | null, box: IBox | null) => {
+        console.log(role, "Solicitando reserva para paciente", paciente, "en box", box);
+        if(role !== USER_ROLE.profesional) return;
+        if(!paciente || !box) {
+            toast.success(`Selecciona ahora ${paciente ? "el box" : "un paciente"} para reservar.`);
+            return;
+        }
+        setShowModalConfirmacionReserva(true);        
+    }
 
     // UI
     return (
         <main className="flex h-screen bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60]">
-            <Recepcion role={role} 
+            <Recepcion role={role}
                 nombreProfesional={nombreProfesional(session?.user?.email || "")}
+                pacienteSeleccionado={pacienteSeleccionado}
+                setPacienteSeleccionado={setPacienteSeleccionado}
+                boxSeleccionado={boxSeleccionado}
                 arribos={arribos}
-                setArribo={setArriboSeleccionado}
-                onClose={onCloseModalNuevoPaciente}/>
+                solicitarReserva={handleSolicitarReserva} />
 
-            <Boxes boxes={boxes} 
-                paciente={pacienteSeleccionado} 
-                setBoxes={setBoxes} 
-                iniciarProgreso={iniciarProgreso} />
+            <Boxes role={role}
+                boxes={boxes}
+                pacienteSeleccionado={pacienteSeleccionado}
+                boxSeleccionado={boxSeleccionado}
+                setBoxSeleccionado={setBoxSeleccionado}
+                solicitarReserva={handleSolicitarReserva}/>
 
+            {role === USER_ROLE.profesional && 
             <ModalConfirmacionReserva show={showModalConfirmacionReserva}
                 paciente={pacienteSeleccionado}
                 role={role}
                 box={boxSeleccionado}
-                setBox={setBoxSeleccionado} 
-                iniciarProgreso={iniciarProgreso}               
+                setBox={setBoxSeleccionado}
+                iniciarProgreso={iniciarProgreso}
                 onClose={() => {
-                    setShowModalConfirmacionReserva(false);                    
+                    setPacienteSeleccionado(null);
+                    setBoxSeleccionado(null);
+                    setShowModalConfirmacionReserva(false);
                     fetchVistaPanoramica();
-                }}/>
+                }} />}
 
             <button
-                className="fixed bottom-6 right-6 z-50 bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center"
+                className="fixed bottom-2 right-2 md:bottom-6 md:right-6 z-50 bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center "
                 title="CiPower"
                 onClick={async () => {
                     signOut({ redirect: false }).then(() => {

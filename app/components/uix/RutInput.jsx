@@ -3,13 +3,13 @@
 import { useState, useRef } from 'react';
 import { handleRutInput, cleanRut, isValidRutFormat } from '@/app/utils/rutFormatter';
 
-export default function RutInput({ 
-    value, 
-    onChange, 
-    placeholder = "Ej: 12.345.678-9", 
+export default function RutInput({
+    value,
+    onChange,
+    placeholder = "Ej: 12.345.678-9",
     className = "",
     disabled = false,
-    ...props 
+    ...props
 }) {
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef(null);
@@ -48,32 +48,29 @@ export default function RutInput({
 
     const isValid = value ? isValidRutFormat(value) : true;
 
-    return (
-        <div className="relative">
-            <input
-                ref={inputRef}
-                type="text"
-                value={value}
-                onChange={handleChange}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder={placeholder}
-                disabled={disabled}
-                className={`
-                    ${className}
+    return (<div className={`rounded border border-[#d5c7aa] px-3 py-2 text-xl bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20 ${className}`}>
+        <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={`w-full
                     ${!isValid ? 'border-red-300 focus:border-red-500' : ''}
                     ${isFocused ? 'ring-2 ring-pink-200' : ''}
-                    transition-all duration-200
+                    transition-all duration-200 bg-transparent
                 `}
-                {...props}
-            />
-            {!isValid && (
-                <div className="absolute -bottom-5 left-0 text-xs text-red-500">
-                    RUT inválido
-                </div>
-            )}
-        </div>
-    );
+            {...props}
+        />
+        {!isValid && (
+            <div className="-mb-5 left-0 text-xs text-red-500 pb-1">
+                RUT inválido
+            </div>
+        )}
+    </div>);
 }

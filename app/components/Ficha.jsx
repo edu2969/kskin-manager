@@ -11,8 +11,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import { FaCaretSquareRight } from "react-icons/fa";
 import { FaRegTrashCan } from "react-icons/fa6";
-import { socket } from "@/lib/socket-client";
-import Toaster, { toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 
@@ -485,7 +484,6 @@ export default function Ficha({ pacienteId }) {
         if (response.ok) {
             const data = await response.json();
             toast.success(data.message || "Atención terminada correctamente");
-            socket.emit('update-centrointegral');
             // Redirigir o cerrar la ficha después de un breve delay
             setTimeout(() => {
                 router.back(); // o la ruta que corresponda
@@ -530,7 +528,7 @@ export default function Ficha({ pacienteId }) {
     };
 
     return (
-        <div className="relative p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-screen">
+        <div className="relative p-1 md:p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-screen">
             {/* Guardando... */}
             {guardando && (
                 <div className="absolute top-2 right-4 bg-[#66754c] text-white px-3 py-1 rounded shadow animate-pulse z-20">
@@ -538,7 +536,7 @@ export default function Ficha({ pacienteId }) {
                 </div>
             )}
 
-            {/* Modal Loader Ficha Inicial */}
+            {/* Loader Ficha Inicial */}
             {loadingFichaInicial && (
                 <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-8 shadow-2xl flex flex-col items-center">
@@ -549,7 +547,7 @@ export default function Ficha({ pacienteId }) {
             )}
 
             {/* Encabezado paciente */}
-            <div className="mb-4">
+            <div className="mb-1 md:mb-4">
                 <div className="bg-[#f6eedb] rounded-lg p-4 shadow border border-[#d5c7aa]">
                     <div className="flex items-center gap-3">
                         <div className="w-14 h-14 rounded-full bg-[#ac9164] flex items-center justify-center text-2xl font-bold text-white">
@@ -599,21 +597,21 @@ export default function Ficha({ pacienteId }) {
             </div>
 
             {/* Contenido principal con efecto carpeta */}
-            <div className="flex h-[calc(100vh-166px)] relative">
+            <div className="flex flex-col md:flex-row h-[calc(100vh-166px)] relative">
                 {/* Contenido (izquierda) - Conectado con tab activo */}
-                <div className="flex-1 bg-[#f6eedb] shadow border border-r-0 border-[#d5c7aa] overflow-y-auto relative z-10"
+                <div className="flex-1 order-2 md:order-1 bg-[#f6eedb] shadow border border-r-0 border-[#d5c7aa] overflow-y-auto relative z-10"
                     style={{
                         borderTopLeftRadius: '0.75rem',
                         borderBottomLeftRadius: '0.75rem'
                     }}>
                     <div className="p-6">
                         {tab === "personal" && (
-                            <div className="space-y-4">
+                            <div className="space-y-2 md:space-y-4">
                                 <h2 className="text-xl font-bold text-[#6a3858] mb-4">Información Personal</h2>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                        <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                             Nombres
                                         </label>
                                         <input
@@ -622,7 +620,7 @@ export default function Ficha({ pacienteId }) {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                        <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                             Apellidos
                                         </label>
                                         <input
@@ -633,7 +631,7 @@ export default function Ficha({ pacienteId }) {
                                 </div>
                                 <div className="flex space-x-4">
                                     <div className="w-full">
-                                        <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                        <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                             RUT
                                         </label>
                                         <input
@@ -643,7 +641,7 @@ export default function Ficha({ pacienteId }) {
                                     </div>
 
                                     <div className="w-1/3">
-                                        <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                        <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                             Genero
                                         </label>
                                         <select
@@ -663,7 +661,7 @@ export default function Ficha({ pacienteId }) {
                                 </div>
 
                                 <div className="w-full">
-                                    <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                    <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                         Dirección
                                     </label>
                                     <input
@@ -675,7 +673,7 @@ export default function Ficha({ pacienteId }) {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                        <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                             Teléfono
                                         </label>
                                         <input
@@ -685,7 +683,7 @@ export default function Ficha({ pacienteId }) {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                                        <label className="block text-xs font-semibold text-[#68563c] mb-1">
                                             Sistema de Salud
                                         </label>
                                         <select
@@ -1419,7 +1417,7 @@ export default function Ficha({ pacienteId }) {
                 </div>
 
                 {/* Lengüetas verticales tipo carpeta (derecha) */}
-                <div className="relative flex flex-col justify-start bg-transparent h-full -ml-0.5 z-20">
+                <div className="relative flex flex-row md:flex-col flex-wrap md:flex-nowrap justify-start bg-transparent h-auto md:h-full order-1 md:order-2 md:-ml-0.5 z-20 w-full md:w-auto md:max-w-[220px] gap-2 md:gap-0 px-2 md:px-0">
                     {getTabsSegunEspecialidad().map((t, index) => {
                         const isActive = tab === t.key;
                         const isLast = index === getTabsSegunEspecialidad().length - 1;
@@ -1428,19 +1426,17 @@ export default function Ficha({ pacienteId }) {
                             <button
                                 key={t.key}
                                 className={`
-                                    ${isLast ? 'h-full' : 'h-32'} ${isFirst ? 'mt-0' : '-mt-4'} relative px-4 pt-6 text-md font-semibold
-                                    border border-[#d5c7aa] border-l-0
+                                    ${isLast ? 'md:h-full' : 'md:h-32'} h-auto ${isFirst ? 'md:mt-0' : '-ml-3 md:-mt-3 md:ml-0'} 
+                                    inline-flex md:block items-center relative px-3 md:px-4 py-2 md:pt-6 text-md font-semibold w-auto md:w-full md:min-w-[200px]
+                                    border border-[#d5c7aa] md:border-l-0 rounded-tl-lg md:rounded-tl-none md:rounded-tr-lg 
+                                    ${isLast && 'md:rounded-br-lg'} 
                                     ${isActive
-                                        ? "text-[#68563c] bg-[#f6eedb] border-l-0"
-                                        : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white border-l-2 border-l-[#d5c7aa] hover:border-l-[#ac9164] hover:border-[#ac9164] cursor-pointer"
+                                        ? "text-[#68563c] bg-[#f6eedb] md:border-l-0 rounded-t-lg md:rounded-none z-30 shadow-sm"
+                                        : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white md:border-l-2 md:border-l-[#d5c7aa] hover:md:border-l-[#ac9164] cursor-pointer rounded-t-lg md:rounded-none z-10"
                                     }
-                                    text-left transition-all duration-200
+                                    text-left md:text-left transition-all duration-200 whitespace-nowrap
                                 `}
-                                style={{
-                                    minWidth: '200px',
-                                    borderTopRightRadius: '0.75rem',
-                                    borderBottomRightRadius: isLast ? '0.75rem' : '0',
-                                    borderTopLeftRadius: '0',
+                                style={{                                    
                                     borderBottomLeftRadius: '0'
                                 }}
                                 onClick={() => setTab(t.key)}
@@ -1465,7 +1461,7 @@ export default function Ficha({ pacienteId }) {
 
 
 
-            <div className="fixed bottom-6 right-6 z-50">
+            <div className="fixed bottom-2 right-2 md:bottom-6 md:right-6 z-50">
                 {/* Tooltip */}
                 {showTooltip && (
                     <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap">
@@ -1556,8 +1552,7 @@ export default function Ficha({ pacienteId }) {
                 <div className="bg-white rounded-lg p-8 shadow-xl border border-[#d5c7aa]">
                     <Loader texto="Finalizando la atención..." />
                 </div>
-            </div>}
-            <Toaster />
+            </div>} 
         </div>
     );
 }

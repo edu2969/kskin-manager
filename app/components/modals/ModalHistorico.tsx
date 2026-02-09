@@ -4,7 +4,7 @@ import { IoMdClose } from "react-icons/io";
 import { Dialog, DialogTitle } from "@headlessui/react";
 import RutInput from "../uix/RutInput";
 import Loader from "../Loader";
-import { IPaciente } from "./types";
+import { IPaciente } from "../sucursal/types";
 import toast from "react-hot-toast";
 import { LuSearch } from "react-icons/lu";
 

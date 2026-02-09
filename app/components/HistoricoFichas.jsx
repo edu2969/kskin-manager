@@ -45,14 +45,14 @@ export default function HistoricoFichas({
     return (
         <>
             {/* Modal principal del histórico */}
-                        <Dialog 
-                open={isOpen} 
-                onClose={onClose} 
+            <Dialog
+                open={isOpen}
+                onClose={onClose}
                 className="fixed z-50 inset-0 flex items-center justify-center"
             >
                 <div className="fixed inset-0 bg-black/40" />
                 <div className="relative bg-white rounded-2xl shadow-2xl z-10 w-[95vw] max-w-6xl h-[85vh] flex flex-col">
-                    
+
                     {/* Header */}
                     <div className="bg-gradient-to-r from-[#6a3858] to-[#8e9b6d] p-6 rounded-t-2xl text-white relative">
                         <button
@@ -61,7 +61,7 @@ export default function HistoricoFichas({
                         >
                             <LiaTimesSolid size={24} />
                         </button>
-                        
+
                         <div className="flex items-center gap-3">
                             <FaClipboardList size={28} />
                             <div>
@@ -93,36 +93,38 @@ export default function HistoricoFichas({
                                 </div>
                             </div>
                         ) : (
-                            <div className="p-6 overflow-y-auto h-full">
+                            <div className="p-2 md:p-6 overflow-y-auto h-full">
                                 <div className="grid gap-2">
                                     {historico.map((ficha, index) => (
-                                        <div 
+                                        <div
                                             key={ficha._id}
-                                            className="bg-gradient-to-r from-[#f6eedb] to-[#fad379]/20 border border-[#d5c7aa] rounded-lg p-3 hover:shadow-md transition-all cursor-pointer"
+                                            className="bg-gradient-to-r from-[#f6eedb] to-[#fad379]/20 border border-[#d5c7aa] rounded-lg md:p-3 hover:shadow-md transition-all cursor-pointer"
                                             onClick={() => handleVerDetalle(ficha)}
                                         >
-                                            <div className="flex items-center justify-between">
+                                            <div className="md:flex md:items-center md:justify-between px-2 md:px-4 pb-1">
                                                 {/* Info principal */}
-                                                <div className="flex-1 flex items-center gap-6">
+                                                <div className="md:flex-1 flex items-start md:items-center md:gap-6">
                                                     {/* Fecha */}
                                                     <div className="flex items-center gap-2 text-[#6a3858] min-w-[140px]">
-                                                        <FaCalendarAlt size={14} />
+                                                        <FaCalendarAlt size={14}/>
                                                         <span className="font-semibold">
                                                             {dayjs(ficha.fecha).format('DD/MM/YYYY')}
                                                         </span>
                                                     </div>
-                                                    
+
                                                     {/* Profesional */}
-                                                    <div className="flex items-center gap-2 text-[#68563c] min-w-[200px]">
-                                                        <FaUserMd size={14} />
-                                                        <span className="font-medium text-sm">
-                                                            {ficha.profesional.nombre}
-                                                        </span>
-                                                        {ficha.profesional.especialidades?.length > 0 && (
-                                                            <span className="text-xs bg-[#ac9164] text-white px-2 py-0.5 rounded-full">
-                                                                {ficha.profesional.especialidades[0]}
-                                                            </span>
-                                                        )}
+                                                    <div className="flex flex-col md:flex-none md:items-center gap-2 text-[#68563c] min-w-[200px]">
+                                                        <div className="flex space-x-3">
+                                                            <FaUserMd size={14} className="mt-4"/>
+                                                            <div className="font-medium text-sm max-w-32">
+                                                                {ficha.profesional.nombre}
+                                                                {ficha.profesional.especialidades?.length > 0 && (<div className="w-full text-right pr-6">
+                                                                    <span className="text-xs bg-[#ac9164] text-white px-2 py-0.5 rounded-full">
+                                                                        {ficha.profesional.especialidades[0]}
+                                                                    </span>
+                                                                </div>)}
+                                                            </div>
+                                                        </div>                                                                                                                
                                                     </div>
 
                                                     {/* Diagnóstico truncado */}
@@ -135,7 +137,7 @@ export default function HistoricoFichas({
                                                             <span className="text-gray-400 italic">Sin diagnóstico registrado</span>
                                                         )}
                                                     </div>
-                                                    
+
                                                     {/* Signos vitales e indicadores */}
                                                     <div className="flex items-center gap-4 text-xs text-gray-500">
                                                         {ficha.consulta.signosVitales && formatearSignosVitales(ficha.consulta.signosVitales).length > 0 && (

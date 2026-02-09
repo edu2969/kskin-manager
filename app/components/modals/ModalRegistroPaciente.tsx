@@ -6,70 +6,62 @@ import { FaPersonCircleQuestion } from 'react-icons/fa6';
 import { IoMdClose } from 'react-icons/io';
 import { LuSearch } from "react-icons/lu";
 import Loader from '../Loader';
-import { IPaciente } from './types';
+import { IPaciente } from '../sucursal/types';
 
-export default function ModalNuevoPaciente({
-    show, setPaciente, onClose
+export default function ModalRegistroPaciente({
+    show, registrarArribo, onClose
 } : {
     show: boolean;
-    setPaciente: React.Dispatch<React.SetStateAction<IPaciente | null>>;
+    registrarArribo: (paciente: IPaciente) => Promise<void>;
     onClose: () => void;
 }) {
     const [searching, setSearching] = useState(false);
     const [rutBusqueda, setRutBusqueda] = useState("");
-    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente>({
-        nombres: "",
-        apellidos: "",
-        rut: "",
-        genero: "",
-        nombreSocial: "",
-        tratoEspecial: false,
-        nuevo: true
-    });
+    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);
     const [loading, setLoading] = useState(false);
     const [registrandoArribo, setRegistrandoArribo] = useState(false);
+
+    const handleBuscarPaciente = async () => {
+        if (!rutBusqueda.trim()) return;
+        setSearching(true);
+        const response = await fetch(`/api/recepcion/pacientePorRut?rut=${encodeURIComponent(rutBusqueda)}`);
+        const data = await response.json();
+        if (data.ok && data.paciente) {
+            console.log("Paciente encontrado:", data.paciente);
+            setPacienteEncontrado(data.paciente);
+        } else {
+            setPacienteEncontrado(null);
+        }
+        setSearching(false);
+    }
         
     return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
         <div className="fixed inset-0 bg-black/30" />
-        <div className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 w-lg border border-[#d5c7aa]">
+        <div className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-[96%] max-w-md">
             <button
                 className="absolute top-2 right-2 text-[#8e9b6d] hover:text-[#68563c] transition-colors"
-                onClick={onClose}
+                onClick={() => {
+                    setPacienteEncontrado(null);
+                    onClose();
+                }}
             >
                 <IoMdClose size={22} />
             </button>
             <DialogTitle className="font-bold text-lg mb-4 text-[#6a3858]">Registrar paciente</DialogTitle>
-            <div className="mb-4">
+            <div className="w-full mb-4">
                 <label className="block text-sm font-semibold text-[#68563c] mb-1">RUT del paciente</label>
                 <div className="flex gap-2">
-                    <RutInput
-                        value={rutBusqueda}
-                        onChange={setRutBusqueda}
-                        className="flex-1 rounded border border-[#d5c7aa] px-3 py-2 text-2xl w-60 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
-                        placeholder="Ej: 12.345.678-9"
-                    />
+                    <div className="w-52">
+                        <RutInput
+                            value={rutBusqueda}
+                            onChange={setRutBusqueda}
+                            className="w-48"
+                            placeholder="Ej: 12.345.678-9"
+                        />
+                    </div>
                     <button
                         className="rounded bg-[#66754c] hover:bg-[#8e9b6d] text-white h-12 w-12 flex flex-col items-center justify-center shadow transition"
-                        onClick={async () => {
-                            if (!rutBusqueda.trim()) return;
-                            setSearching(true);
-                            const response = await fetch(`/api/recepcion/pacientePorRut?rut=${encodeURIComponent(rutBusqueda)}`);
-                            const data = await response.json();
-                            if (data.ok && data.paciente) {
-                                setPaciente(data.paciente);
-                            } else {
-                                setPaciente({
-                                    nombres: "",
-                                    apellidos: "",
-                                    rut: rutBusqueda,
-                                    genero: "",
-                                    nombreSocial: "",
-                                    tratoEspecial: false,
-                                    nuevo: true
-                                });
-                            }
-                            setSearching(false);
-                        }}
+                        onClick={handleBuscarPaciente}
                         type="button"
                         title="Buscar"
                     >
@@ -107,10 +99,10 @@ export default function ModalNuevoPaciente({
                                     className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                                     value={pacienteEncontrado.nombres}
                                     onChange={e =>
-                                        setPacienteEncontrado(prev => ({
+                                        setPacienteEncontrado(prev => prev ? ({
                                             ...prev,
                                             nombres: e.target.value,
-                                        }))
+                                        }) : null)
                                     }
                                     placeholder="Nombre completo"
                                 />
@@ -121,10 +113,10 @@ export default function ModalNuevoPaciente({
                                     className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                                     value={pacienteEncontrado.genero}
                                     onChange={e =>
-                                        setPacienteEncontrado(prev => ({
+                                        setPacienteEncontrado(prev => prev ? ({
                                             ...prev,
                                             genero: e.target.value,
-                                        }))
+                                        }) : null)
                                     }
                                 >
                                     <option value="">Selecciona...</option>
@@ -139,11 +131,11 @@ export default function ModalNuevoPaciente({
                                     id="tratoEspecial"
                                     checked={!!pacienteEncontrado.tratoEspecial}
                                     onChange={e =>
-                                        setPacienteEncontrado(prev => ({
+                                        setPacienteEncontrado(prev => prev ? ({
                                             ...prev,
                                             tratoEspecial: e.target.checked,
                                             nombreSocial: e.target.checked ? (prev.nombreSocial || "") : ""
-                                        }))
+                                        }) : null)
                                     }
                                     className="mr-2 accent-[#66754c]"
                                 />
@@ -157,10 +149,10 @@ export default function ModalNuevoPaciente({
                                         className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                                         value={pacienteEncontrado.nombreSocial || ""}
                                         onChange={e =>
-                                            setPacienteEncontrado(prev => ({
+                                            setPacienteEncontrado(prev => prev ? ({
                                                 ...prev,
                                                 nombreSocial: e.target.value,
-                                            }))
+                                            }) : null)
                                         }
                                         placeholder="Nombre social"
                                     />
@@ -174,13 +166,17 @@ export default function ModalNuevoPaciente({
                 <button
                     className="flex-1 rounded-full bg-[#66754c] hover:bg-[#8e9b6d] text-white font-semibold py-2 transition disabled:opacity-50 shadow"
                     disabled={loading || !pacienteEncontrado || !pacienteEncontrado.nombres || !pacienteEncontrado.genero}
-                    onClick={() => setPaciente(pacienteEncontrado)}
+                    onClick={() => {
+                        pacienteEncontrado && registrarArribo(pacienteEncontrado);
+                        onClose();
+                    }}
                 >{registrandoArribo ? <Loader texto="Registrando..." /> : "Aceptar"}
                 </button>
                 <button
                     className="flex-1 rounded-full bg-[#d5c7aa] hover:bg-[#ac9164] text-[#68563c] hover:text-white font-semibold py-2 transition shadow"
                     onClick={() => {                        
                         setRutBusqueda("");
+                        setPacienteEncontrado(null);
                         onClose();
                     }}
                 >
