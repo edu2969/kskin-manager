@@ -95,7 +95,7 @@ export default function HistoricoFichas({
                         ) : (
                             <div className="p-2 md:p-6 overflow-y-auto h-full">
                                 <div className="grid gap-2">
-                                    {historico.map((ficha, index) => (
+                                    {historico.map((ficha) => (
                                         <div
                                             key={ficha._id}
                                             className="bg-gradient-to-r from-[#f6eedb] to-[#fad379]/20 border border-[#d5c7aa] rounded-lg md:p-3 hover:shadow-md transition-all cursor-pointer"

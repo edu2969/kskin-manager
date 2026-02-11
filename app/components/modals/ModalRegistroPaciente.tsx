@@ -17,9 +17,7 @@ export default function ModalRegistroPaciente({
 }) {
     const [searching, setSearching] = useState(false);
     const [rutBusqueda, setRutBusqueda] = useState("");
-    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [registrandoArribo, setRegistrandoArribo] = useState(false);
+    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);    
 
     const handleBuscarPaciente = async () => {
         if (!rutBusqueda.trim()) return;
@@ -165,12 +163,14 @@ export default function ModalRegistroPaciente({
             <div className="flex gap-2 mt-6 h-12">
                 <button
                     className="flex-1 rounded-full bg-[#66754c] hover:bg-[#8e9b6d] text-white font-semibold py-2 transition disabled:opacity-50 shadow"
-                    disabled={loading || !pacienteEncontrado || !pacienteEncontrado.nombres || !pacienteEncontrado.genero}
+                    disabled={!pacienteEncontrado || !pacienteEncontrado.nombres || !pacienteEncontrado.genero}
                     onClick={() => {
-                        pacienteEncontrado && registrarArribo(pacienteEncontrado);
+                        if(pacienteEncontrado) {
+                            registrarArribo(pacienteEncontrado);
+                        }
                         onClose();
                     }}
-                >{registrandoArribo ? <Loader texto="Registrando..." /> : "Aceptar"}
+                >Aceptar
                 </button>
                 <button
                     className="flex-1 rounded-full bg-[#d5c7aa] hover:bg-[#ac9164] text-[#68563c] hover:text-white font-semibold py-2 transition shadow"

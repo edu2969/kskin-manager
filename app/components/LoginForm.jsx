@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { TIPO_CARGO } from "@/app/utils/constants";
 import Loader from "./Loader";
 import { IoAlertCircle } from "react-icons/io5";
 
@@ -54,9 +53,7 @@ export default function LoginForm() {
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();        
-      } else {
+      if (!response.ok) {        
         console.error("Failed to fetch user role:", response.statusText);        
       }      
 

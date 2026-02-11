@@ -33,7 +33,7 @@ export default function ModalHistorico({
             } else {
                 toast.error("Error al cargar el histórico de fichas.");
             }
-        } catch (err) {
+        } catch {
             toast.error("Error de red al cargar el histórico.");
         }
         setLoadingHistorico(false);
@@ -79,7 +79,7 @@ export default function ModalHistorico({
                                     } else {
                                         toast.error("Error al buscar paciente");
                                     }
-                                } catch (err) {
+                                } catch {
                                     toast.error("Error de red al buscar paciente");
                                 }
                                 setSearching(false);

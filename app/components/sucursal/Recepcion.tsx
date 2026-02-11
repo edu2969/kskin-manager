@@ -59,7 +59,7 @@ export default function Recepcion({
             } else {
                 toast.error(data.error || "Error al registrar arribo");
             }
-        } catch (err) {
+        } catch {
             toast.error("Error de red al registrar arribo");
         } finally {
             setLoading(false);

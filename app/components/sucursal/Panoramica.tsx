@@ -16,11 +16,9 @@ import toast from "react-hot-toast";
 
 export default function Panoramica({ session }: { session: Session }) {
     const [pacienteSeleccionado, setPacienteSeleccionado] = useState<IPaciente | null>(null);
-    const [arriboSeleccionado, setArriboSeleccionado] = useState<IArribo | null>(null);
     const [boxSeleccionado, setBoxSeleccionado] = useState<IBox | null>(null);
 
     const [showModalConfirmacionReserva, setShowModalConfirmacionReserva] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [arribos, setArribos] = useState<IArribo[]>([]);
     const [boxes, setBoxes] = useState<IBox[]>([]);
     const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -29,14 +27,12 @@ export default function Panoramica({ session }: { session: Session }) {
     const router = useRouter();
 
     const fetchVistaPanoramica = async () => {
-        setLoading(true);
         const response = await fetch('/api/panoramica');
         const data = await response.json();
         setArribos(data.arribos || []);
         setBoxes(data.boxes || []);
         console.log("ARRIBOS", data.arribos);
         console.log("BOXES", data.boxes);
-        setLoading(false);
     };
    
     useEffect(() => {
@@ -45,16 +41,13 @@ export default function Panoramica({ session }: { session: Session }) {
 
     useEffect(() => {
         const fetchAll = async () => {
-            setLoading(true);
             try {
                 await Promise.all([
                     fetchVistaPanoramica(),
                 ]);
             } catch (error) {
                 console.error('Error fetching initial data:', error);
-            } finally {
-                setLoading(false);
-            }
+            } 
         };
         fetchAll();
     }, []);
@@ -92,7 +85,7 @@ export default function Panoramica({ session }: { session: Session }) {
                     : b
             )
         );
-        let duracion = boxes.find((b) => b._id === boxId)?.ocupacion?.tiempoEstimado || 60;
+        const duracion = boxes.find((b) => b._id === boxId)?.ocupacion?.tiempoEstimado || 60;
         console.log("Iniciando progreso box", boxId, "duracion", duracion);
         let progreso = 0;
         timers.current[boxId] = setInterval(() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Dialog } from "@headlessui/react";
 import { CiPower } from "react-icons/ci";
 import { useRouter } from "next/navigation";
@@ -29,26 +29,8 @@ const TABS_OTROS = [
     { key: "indicaciones", label: "Indicaciones", color: "sky" },
 ];
 
-function flattenExamenes(examenes) {
-    let flat = [];
-    for (const ex of examenes) {
-        if (ex.sub) {
-            flat = flat.concat(
-                ex.sub.map((s) => ({
-                    codigo: s.codigo,
-                    nombre: `${ex.nombre} - ${s.nombre}`,
-                }))
-            );
-        } else {
-            flat.push({ codigo: ex.codigo, nombre: ex.nombre });
-        }
-    }
-    return flat;
-}
-
 export default function Ficha({ pacienteId }) {
     const [tab, setTab] = useState("personal");
-    const [ficha, setFicha] = useState(null);
     const [paciente, setPaciente] = useState({
         nombres: "", apellidos: "", rut: "", fechaNacimiento: null, correoElectronico: ""
     });
@@ -79,9 +61,7 @@ export default function Ficha({ pacienteId }) {
     // Estados para antecedentes mórbidos y medicamentos desde API
     const [antecedentesMorbidos, setAntecedentesMorbidos] = useState([]);
     const [antecedentesMorbidosAdicionales, setAntecedentesMorbidosAdicionales] = useState("");
-    const [medicamentos, setMedicamentos] = useState([]);
-    const [examenes, setExamenes] = useState([]);
-    const [examenesFlatted, setExamenesFlatted] = useState([]);
+    const [medicamentos, setMedicamentos] = useState([]);    
     
     const [otroMorbido, setOtroMorbido] = useState("");
     const [medicamentoInput, setMedicamentoInput] = useState("");
@@ -119,7 +99,7 @@ export default function Ficha({ pacienteId }) {
     };
 
     // Función para determinar qué tabs mostrar según especialidad
-    const getTabsSegunEspecialidad = () => {
+    const getTabsSegunEspecialidad = useCallback(() => {
         if (!profesional || !profesional.especialidadIds || profesional.especialidadIds.length === 0) {
             return TABS_OTROS; // Default para usuarios sin especialidad
         }
@@ -130,11 +110,11 @@ export default function Ficha({ pacienteId }) {
         );       
         
         return esMedicoTab ? TABS_MEDICO : TABS_OTROS;
-    };
+    }, [profesional]);
 
     // Función para verificar si es médico (NO debe mostrar secciones médicas en info personal)
     const esMedico = () => {
-        if (!profesional || !profesional.especialidadIds || profesional.especialidadIds.length === 0) {
+        if (!profesional || !profesional.especialidadIds || !profesional.especialidadIds.length) {
             return false;
         }
         return profesional.especialidadIds.some(esp => 
@@ -161,7 +141,6 @@ export default function Ficha({ pacienteId }) {
                 const fichaData = await fichaRes.json();
                 
                 console.log("Ficha data:", fichaData);
-                setFicha(fichaData.ficha);
                 setPaciente(fichaData.paciente);
                 setProfesional(fichaData.profesional);
                 setHistorico(fichaData.historico || []);
@@ -265,17 +244,6 @@ export default function Ficha({ pacienteId }) {
                     setMedicamentosReceta(medicamentosData.medicamentos);
                 }
 
-                // Cargar lista de exámenes disponibles
-                const examenesRes = await fetch('/api/examenes');
-                const examenesData = await examenesRes.json();
-                
-                if (examenesData.examenes) {
-                    setExamenes(examenesData.examenes);
-                    // Aplanar la estructura de exámenes para facilitar búsqueda
-                    const examenesFlat = flattenExamenes(examenesData.examenes);
-                    setExamenesFlatted(examenesFlat);
-                }
-                
                 // Verificar si las alergias están vacías y mostrar alerta
                 const alergias = fichaData.paciente?.alergias;
                 const tieneAlergias = alergias && alergias.length > 0 && alergias.some(alergia => alergia.trim() !== '');
@@ -355,7 +323,7 @@ export default function Ficha({ pacienteId }) {
             e.codigo.toLowerCase().includes(q) ||
             e.nombre.toLowerCase().includes(q)
         ).slice(0, 6));
-    }, [examenInput, examenesFlatted]);
+    }, [examenInput, setExamenAutocomplete]);
 
     // Autocompletar fármacos
     useEffect(() => {
@@ -400,19 +368,21 @@ export default function Ficha({ pacienteId }) {
                 console.log(`Tab '${tab}' no permitido para especialidad, cambiando a '${tabsPermitidos[0].key}'`);
             }
         }
-    }, [profesional, tab]);
+    }, [profesional, tab, getTabsSegunEspecialidad]);
 
     // Handlers
-    const handleAnamnesisChange = (e) => {
+    const handleAnamnesisChange = useCallback((e) => {
         setAnamnesis(e.target.value);
-    };
+    }, [setAnamnesis]);
+
     const handleAnamnesisBlur = () => {
         guardarAtributo("anamnesis", anamnesis);
     };
 
-    const handleIndicacionesChange = (e) => {
+    const handleIndicacionesChange = useCallback((e) => {
         setIndicaciones(e.target.value);
-    };
+    }, [setIndicaciones]);
+    
     const handleIndicacionesBlur = () => {
         guardarAtributo("indicaciones", indicaciones);
     };

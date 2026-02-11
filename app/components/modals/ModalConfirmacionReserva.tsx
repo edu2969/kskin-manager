@@ -1,6 +1,6 @@
 
 import { Dialog, DialogTitle } from "@headlessui/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { AiOutlineMan, AiOutlineWoman } from "react-icons/ai";
 import { FaPersonCircleQuestion } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
@@ -121,7 +121,10 @@ export default function ModalConfirmacionReserva({
                             value={box?.horas ?? 1}
                             onChange={e => {
                                 const horas = Math.max(0, Math.min(12, Number(e.target.value)));
-                                setBox(box);
+                                setBox((prevBox) => prevBox ? ({
+                                    ...prevBox,
+                                    horas
+                                }) : null);
                             }}
                             className="w-16 rounded-md border border-gray-300 px-2 py-1"
                             placeholder="Horas"

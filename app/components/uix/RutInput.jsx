@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
-import { handleRutInput, cleanRut, isValidRutFormat } from '@/app/utils/rutFormatter';
+import { handleRutInput, isValidRutFormat } from '@/app/utils/rutFormatter';
 
 export default function RutInput({
     value,
