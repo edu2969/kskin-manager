@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/api/me/[...nextauth]/route.js", "server.mts", "tailwind.config.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/api/me/[...nextauth]/route.js", "server.mts", "tailwind.config.js", "app/page.js", "components/uix/RutInput.jsx"],
   "exclude": ["node_modules", ".next/**/*"]
 }

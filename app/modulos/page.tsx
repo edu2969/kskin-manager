@@ -1,4 +1,4 @@
-import Panoramica from '@/app/components/sucursal/Panoramica';
+import Panoramica from '@/components/sucursal/Panoramica';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/utils/authOptions";
 

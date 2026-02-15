@@ -1,67 +1,49 @@
-import mongoose from "mongoose";
-import { connectMongoDB } from "@/lib/mongodb";
+import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import Paciente from "@/models/paciente";
-import Profesional from "@/models/profesional";
-import Box from "@/models/box";
-import User from "@/models/user";
-import Arribo from "@/models/arribo";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/utils/authOptions";
+import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { USER_ROLE } from "@/app/utils/constants";
 
 export async function GET() {
-    await connectMongoDB();
     console.log("[GET] /api/panoramica - Iniciando petición");
 
-    if (!mongoose.models.Profesional) {
-        mongoose.model("Profesional", Profesional.schema);
-    }
-    if (!mongoose.models.Paciente) {
-        mongoose.model("Paciente", Paciente.schema);
-    }
-
-    const session = await getServerSession(authOptions);
-    console.log("[GET] /api/panoramica - Session:", session ? "Existe" : "No existe");
-
-    if (!session || !session.user || !session.user.id) {
-        console.log("[GET] /api/panoramica - Usuario no autorizado");
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    // Busca el usuario por email
-    const user = await User.findOne({ _id: session.user.id });
-    console.log("[GET] /api/panoramica - Usuario encontrado:", !!user);
-
+    const { user } = await getAuthenticatedUser();
     if (!user) {
-        console.log("[GET] /api/panoramica - Usuario no encontrado");
+        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verificar rol del usuario
+    const { data: usuario, error: userError } = await supabase
+        .from("usuarios")
+        .select("rol")
+        .eq("id", user.id)
+        .single();
+
+    if (userError || !usuario || (usuario.rol !== USER_ROLE.recepcionista && usuario.rol !== USER_ROLE.profesional)) {
+        console.log("[GET] /api/panoramica - Rol de usuario no permitido");
         return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
 
-    if (user.role !== USER_ROLE.profesional && user.role !== USER_ROLE.recepcionista) {
-        console.log("[GET] /api/panoramica - Rol de usuario no permitido:", user.role);
-        return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    // Consultar boxes y pacientes
+    const { data: boxes, error: boxesError } = await supabase
+        .from("boxes")
+        .select("*, paciente_id(*), profesional_id(*)");
+
+    if (boxesError) {
+        console.log("[GET] /api/panoramica - Error al consultar boxes", boxesError);
+        return NextResponse.json({ error: "Error al consultar boxes" }, { status: 500 });
     }
 
-    // Obtiene todos los pacientes y boxes
-    console.log("[GET] /api/panoramica - Consultando pacientes y boxes");
-    const boxes = await Box.find().populate("pacienteId").populate("profesionalId");
-    const pacienteAtendiendoseIds = boxes.filter(box => box.profesionalId == null).flatMap(box => box.pacienteId);
-    const pacientes = await Paciente.find({
-        _id: {
-            $nin: pacienteAtendiendoseIds,
-        }
-    });
+    // Consultar arribos
+    const { data: arribos, error: arribosError } = await supabase
+        .from("arribos")
+        .select("*, paciente_id(*)")
+        .not("fecha_atencion", "is", null);
 
-    // Obtiene arribos
-    const arribos = await Arribo.find({
-        fechaLlegada: { $exists: true },
-        fechaAtencion: null,
-        fechaRetiro: null
-    }).populate("pacienteId").populate("profesionalId");
-    
-    console.log("[GET] /api/panoramica - Pacientes encontrados:", pacientes.length);
-    console.log("[GET] /api/panoramica - Boxes encontrados:", boxes.length);
+    if (arribosError) {
+        console.log("[GET] /api/panoramica - Error al consultar arribos", arribosError);
+        return NextResponse.json({ error: "Error al consultar arribos" }, { status: 500 });
+    }
 
+    console.log("[GET] /api/panoramica - Datos obtenidos correctamente");
     return NextResponse.json({ arribos, boxes });
 }

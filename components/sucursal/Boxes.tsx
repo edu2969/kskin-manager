@@ -1,0 +1,102 @@
+import { IBox, IPaciente } from "./types";
+import { LuDoorClosed, LuDoorOpen } from "react-icons/lu";
+import { AiOutlineMan, AiOutlineWoman } from "react-icons/ai";
+import { FaPersonCircleQuestion } from "react-icons/fa6";
+import { USER_ROLE } from "@/app/utils/constants";
+
+const boxLibre = (box: IBox) => {
+    // 1. Sin paciente o profesional → LIBRE
+    if (!box.pacienteId || !box.profesionalId) return true;
+
+    // 2. ✅ NUEVO: Tiene terminoAtencion → LIBRE (atención completada)
+    if (box.termino_atencion) return true;
+
+    // 3. Sin inicio de atención → LIBRE  
+    if (!box.inicio_atencion) return true;
+
+    // 4. Tiempo estimado cumplido → LIBRE
+    const inicioTime = new Date(box.inicio_atencion).getTime();
+    const tiempoEstimado = box.ocupado ? 60 : 0;
+    const finEstimado = inicioTime + (tiempoEstimado * 60 * 1000);
+    return Date.now() > finEstimado;
+}
+
+export default function Boxes({
+    role,
+    boxes,    
+    boxSeleccionado,
+    setBoxSeleccionado,
+    solicitarReserva,
+    pacienteSeleccionado
+}: {
+    role: number;
+    boxes: IBox[];
+    boxSeleccionado: IBox | null;
+    setBoxSeleccionado: React.Dispatch<React.SetStateAction<IBox | null>>;
+    solicitarReserva: (paciente: IPaciente | null, box: IBox | null) => void;
+    pacienteSeleccionado: IPaciente | null;
+}) {
+    const handleBoxSeleccionado = (box: IBox) => {
+        if(role !== USER_ROLE.profesional) return;
+        setBoxSeleccionado(box);
+        solicitarReserva(pacienteSeleccionado, box);
+    }
+
+    return (<section className="flex-1 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0.5 md:gap-6 p-0.5 md:p-8 content-start">
+        {boxes.map((box, idx) => (
+            <div
+                key={`box_${idx}`}
+                className={`relative rounded-xl shadow-lg flex flex-col items-center justify-center h-28 md:h-40 transition-all
+                            ${boxLibre(box) ? "text-[#66754c] bg-[#f6eedb] border-2 border-dashed border-[#d5c7aa]" : "text-white bg-[#8c966d] border-2 border-[#d5c7aa]"}
+                            ${pacienteSeleccionado && boxLibre(box) ? "ring-2 ring-pink-300" : ""}
+                            ${boxSeleccionado?.id === box.id ? "bg-pink-300 text-pink-800" : ""}
+                        `}
+                onClick={() => handleBoxSeleccionado(box)}
+                data-box-id={box.id}
+            >
+                {boxLibre(box) ? <LuDoorOpen className={`text-4xl mb-2 ${boxSeleccionado?.id === box.id ? "text-white" : "text-[#d5c7aa]"}`} /> : <LuDoorClosed className="text-4xl mb-2 text-white" />}
+                <div className="font-bold text-lg mb-1">Box {box.numero}</div>
+                {boxLibre(box) ? (
+                    <div className={`text-sm mt-4 ${boxSeleccionado?.id === box.id ? "text-white font-bold" : "text-gray-400"}`}>Libre</div>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-2 mb-2">
+                            {box.pacienteId.genero === "F" && <AiOutlineWoman className="text-2xl text-pink-600" />}
+                            {box.pacienteId.genero === "M" && <AiOutlineMan className="text-2xl text-blue-600" />}
+                            {box.pacienteId.genero === "O" && <FaPersonCircleQuestion className="text-2xl text-neutral-600" />}
+                            <span className="font-medium">{box.pacienteId.nombres} {box.pacienteId.apellidos?.split(" ")[0]}</span>
+                            <span className="font-medium">{box.profesionalId?.usuario_id.nombre ?? ''}</span>
+                        </div>
+                        <div className="w-24 md:w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-[#fad379] transition-all"
+                                style={{
+                                    width: `${Math.min(100, Math.round(
+                                        ((Date.now() - (box.inicio_atencion || new Date()).getTime()) /
+                                            ((box.inicio_atencion?.getTime() || 60) * 60 * 1000)) * 100
+                                    ))}%`
+                                }}
+                            />
+                        </div>
+                        <div className="text-xs text-gray-100 mt-1">
+                            {(() => {
+                                const inicioTime = new Date(box.inicio_atencion ?? new Date()).getTime();
+                                const tiempoEstimado = box.ocupado ? 60 : 0; // minutos
+                                const finEstimado = inicioTime + (tiempoEstimado * 60 * 1000);
+                                const tiempoRestante = Math.max(0, finEstimado - Date.now());
+                                const minutosRestantes = Math.floor(tiempoRestante / (60 * 1000));
+                                const segundosRestantes = Math.floor((tiempoRestante % (60 * 1000)) / 1000);
+
+                                if (minutosRestantes > 0) {
+                                    return `${minutosRestantes}m ${segundosRestantes}s restantes`;
+                                } else {
+                                    return `${segundosRestantes}s restantes`;
+                                }
+                            })()}
+                        </div>
+                    </>
+                )}
+            </div>
+        ))}
+    </section>);
+}

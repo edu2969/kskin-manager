@@ -1,0 +1,145 @@
+/**
+ * BIOX - API de Login con Supabase Auth
+ * Reemplaza NextAuth credentials provider
+ */
+
+import { NextRequest } from "next/server";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { APIResponse } from "@/lib/supabase-helpers";
+
+// ===============================================
+// TIPOS DE DATOS
+// ===============================================
+
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+interface LoginResponse {
+  user: {
+    id: string;
+    email: string;
+    nombre: string;
+    rol: number;
+  };
+  session: any;
+}
+
+// ===============================================
+// OPERACIÓN CON SUPABASE (NUEVO SISTEMA)
+// ===============================================
+
+async function loginWithSupabase(email: string, password: string): Promise<LoginResponse> {
+  // 1. Autenticar con Supabase Auth
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    throw new Error('Email o contraseña incorrectos');
+  }
+
+  if (!data.user || !data.session) {
+    throw new Error('Error en la autenticación');
+  }
+
+  // 2. Obtener información adicional del usuario y sus cargos
+  const { data: usuario, error: userError } = await supabase
+    .from('usuarios')
+    .select(`*`)
+    .eq('id', data.user.id)
+    .single();
+
+  if (userError || !usuario) {
+    // Si no existe en usuarios, crearlo (primera vez)
+    const { data: newUser, error: createError } = await supabase
+      .from('usuarios')
+      .insert({
+        id: data.user.id,
+        email: data.user.email!,
+        nombre: data.user.email!.split('@')[0], // Nombre por defecto
+        telefono: null,
+        activo: true
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      throw new Error('Error creando registro de usuario');
+    }
+
+    return newUser;
+  }
+
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email!,
+      nombre: usuario.nombre,
+      rol: Number(usuario.rol)
+    },
+    session: data.session
+  };
+}
+
+// ===============================================
+// HANDLER PRINCIPAL
+// ===============================================
+
+export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+
+  try {
+    const body: LoginRequest = await req.json();
+    const { email, password } = body;
+
+    // Validación de entrada
+    if (!email || !password) {
+      return APIResponse.error("Email y contraseña son requeridos");
+    }
+
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      return APIResponse.error("Formato de email inválido");
+    }
+
+    // Ejecutar login directamente con Supabase
+    const result = await loginWithSupabase(email, password);
+
+    // Establecer cookies de sesión si es necesario
+    const response = APIResponse.success({
+      user: result.user,
+      message: 'Login exitoso'
+    });
+
+    return response;
+
+  } catch (error: any) {
+    return APIResponse.error(
+      error.message || "Error en el login",
+      401
+    );
+  }
+}
+
+// ===============================================
+// ENDPOINT PARA LOGOUT
+// ===============================================
+
+export async function DELETE(req: NextRequest) {
+  try {
+    // Logout con Supabase
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return APIResponse.error("Error cerrando sesión", 500);
+    }
+
+    return APIResponse.success({
+      message: 'Logout exitoso'
+    });
+
+  } catch (error) {
+    return APIResponse.error("Error en logout", 500);
+  }
+}

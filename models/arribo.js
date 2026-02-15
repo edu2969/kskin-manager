@@ -1,7 +1,6 @@
 import mongoose, { Schema, models } from "mongoose";
 
-const arriboSchema = new Schema(
-    {
+const arriboSchema = new Schema({
         pacienteId: { type: mongoose.Schema.Types.ObjectId, ref: "Paciente", required: true },
         profesionalId: { type: mongoose.Schema.Types.ObjectId, ref: "Profesional" },
         fechaLlegada: { type: Date, required: true },

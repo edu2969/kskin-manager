@@ -1,16 +1,10 @@
-import mongoose from "mongoose";
-import { connectMongoDB } from "@/lib/mongodb";
+import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
-import Ficha from "@/models/ficha";
-import User from "@/models/user";
-import Profesional from "@/models/profesional";
-import Especialidad from "@/models/especialidad";
-import Paciente from "@/models/paciente";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/utils/authOptions";
+import { USER_ROLE } from "@/app/utils/constants";
 
 export async function GET(req) {
-    await connectMongoDB();
+    console.log("[GET] /api/paciente/historico - Iniciando petición");
 
     const { searchParams } = new URL(req.url);
     const pacienteId = searchParams.get("pacienteId");
@@ -19,120 +13,54 @@ export async function GET(req) {
         return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
     }
 
-    if (!mongoose.models.Profesional) {
-        mongoose.model("Profesional", Profesional.schema);
-    }
-
-    if (!mongoose.models.Paciente) {
-        mongoose.model("Paciente", Paciente.schema);
-    }
-
-    if (!mongoose.models.Especialidad) {
-        mongoose.model("Especialidad", Especialidad.schema);
-    }
-
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const user = await User.findOne({ _id: session.user.id });
+    const { user } = await getAuthenticatedUser();
     if (!user) {
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Obtener fechas anteriores a hoy 00:00
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const { data: usuario, error: userError } = await supabase
+        .from("usuarios")
+        .select("rol")
+        .eq("id", user.id)
+        .single();
 
-    // Obtener fichas históricas del paciente con toda la información poblada
-    const fichas = await Ficha.find({ 
-        pacienteId,
-        createdAt: { $lt: startOfToday }
-    })
-    .populate({
-        path: 'profesionalId',
-        populate: [
-            { 
-                path: 'userId', 
-                select: 'name email' 
-            },
-            { 
-                path: 'especialidadIds', 
-                select: 'nombre' 
-            }
-        ]
-    })
-    .populate({
-        path: 'pacienteId'
-    })
-    .sort({ createdAt: -1 })
-    .lean();
+    if (userError || !usuario || (usuario.rol !== USER_ROLE.profesional && usuario.rol !== USER_ROLE.recepcionista)) {
+        console.warn("Acceso denegado: rol no permitido", usuario?.rol);
+        return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
 
-    // Formatear la respuesta para el frontend
+    const { data: fichas, error: fichasError } = await supabase
+        .from("fichas")
+        .select(`
+            id, fecha, tratamiento,
+            profesional:profesionales (
+                usuario_id ( nombre, email ),
+                profesional_especialidades (
+                    especialidad_id:especialidades ( nombre )
+                )
+            )
+        `)
+        .eq("paciente_id", pacienteId)
+        .order("created_at", { ascending: false });
+
+    console.log("**** Solo especialidades -------------->", fichas?.map(f => f.profesional?.profesional_especialidades?.map(e => e.especialidad_id?.nombre)));
+
+    if (fichasError) {
+        console.error("Error al consultar fichas históricas:", fichasError);
+        return NextResponse.json({ error: "Error al consultar fichas históricas" }, { status: 500 });
+    }
+
+    console.log("Formateando respuesta...");
     const historico = fichas.map(ficha => ({
-        _id: ficha._id,
-        fecha: ficha.createdAt,
-        
-        // Información del profesional
-        profesional: {
-            _id: ficha.profesionalId?._id,
-            nombre: ficha.profesionalId?.userId?.name || 'Sin profesional asignado',
-            email: ficha.profesionalId?.userId?.email,
-            especialidades: ficha.profesionalId?.especialidadIds?.map(esp => esp.nombre) || []
-        },
-        
-        // Información del paciente
-        paciente: {
-            _id: ficha.pacienteId?._id,
-            nombres: ficha.pacienteId?.nombres,
-            apellidos: ficha.pacienteId?.apellidos,
-            rut: ficha.pacienteId?.rut,
-            fechaNacimiento: ficha.pacienteId?.fechaNacimiento,
-            genero: ficha.pacienteId?.genero,
-            sistemaSalud: ficha.pacienteId?.sistemaSalud,
-            alergias: ficha.pacienteId?.alergias || [],
-            antecedentesMorbidos: ficha.pacienteId?.antecedenteMorbidoIds?.map(ant => ant.glosa || ant.nombre || ant) || [],
-            medicamentos: ficha.pacienteId?.medicamentoIds?.map(med => ({
-                nombre: med.glosa || med.nombre || med,
-                unidades: med.unidades,
-                frecuencia: med.frecuencia
-            })) || [],
-            partos: ficha.pacienteId?.partos || [],
-            higiene: ficha.pacienteId?.higiene || {}
-        },
-        
-        // Información de la consulta
-        consulta: {
-            motivoConsulta: ficha.motivoConsulta,
-            anamnesis: ficha.anamnesis,
-            examenFisico: ficha.examenFisico,
-            diagnostico: ficha.diagnostico,
-            planTratamiento: ficha.planTratamiento,
-            observaciones: ficha.observaciones,
-            
-            // Signos vitales
-            signosVitales: {
-                presionArterial: ficha.presionArterial,
-                frecuenciaCardiaca: ficha.frecuenciaCardiaca,
-                temperatura: ficha.temperatura,
-                peso: ficha.peso,
-                talla: ficha.talla,
-                imc: ficha.imc
-            },
-            
-            // Solicitudes y tratamientos
-            solicitudExamenes: ficha.solicitudExamenes || [],
-            indicaciones: ficha.indicaciones,
-            recetas: ficha.recetas || [],
-            
-            // Información temporal
-            estadoConsulta: ficha.estadoConsulta,
-            horaInicio: ficha.horaInicio,
-            horaFin: ficha.horaFin,
-            duracionMinutos: ficha.duracionMinutos
-        }
+        fichaId: ficha.id,
+        fecha: ficha.fecha,
+        nombreProfesional: ficha.profesional?.usuario_id?.nombre,
+        especialidades: ficha.profesional?.profesional_especialidades?.map(e => e.especialidad_id?.nombre) || [],
+        alias: ficha.profesional?.usuario_id?.email?.split("@")[0] || "none",
+        tratamiento: ficha.tratamiento
     }));
+
+    console.log("Respuesta formateada:", historico);
 
     return NextResponse.json({ historico });
 }
