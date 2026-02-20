@@ -8,6 +8,7 @@ import 'dayjs/locale/es';
 import { useQuery } from "@tanstack/react-query";
 import { AiOutlineMan, AiOutlineWoman } from "react-icons/ai";
 import { FaPersonCircleQuestion } from "react-icons/fa6";
+import { useRouter } from "next/navigation";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 
@@ -18,12 +19,13 @@ export function ModalDetalleFicha({
     fichaId: string | null;
     onClose: () => void;
 }) {
+    const router = useRouter();
     const { data: ficha, isLoading } = useQuery<IFichaDetalle>({
         queryKey: ['fichaDetalle', fichaId],
         queryFn: async () => {
             if (!fichaId) return null;
-            const res = await fetch(`/api/paciente/fichaPorId/${fichaId}`);
-            console.log(`/api/paciente/fichaPorId/${fichaId}`)            
+            const res = await fetch(`/api/paciente/ficha?fichaId=${fichaId}`);
+            console.log(`/api/paciente/ficha?fichaId=${fichaId}`)            
             if (!res.ok) throw new Error('Error al cargar el detalle de la ficha');            
             const data = await res.json();
             console.log("Detalle de ficha:", data);
@@ -78,7 +80,7 @@ export function ModalDetalleFicha({
             {/* Contenido del detalle */}
             {ficha && (
                 <div className="flex-1 overflow-y-auto p-6">
-                    <div className="grid gap-6">
+                    <div className="grid gap-2 md:gap-6">
 
                         {/* Información del Paciente */}
                         <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
@@ -114,14 +116,7 @@ export function ModalDetalleFicha({
                                 </div>)}
                             </div>
                         </div>
-
-                        {/* Motivo y Anamnesis */}
-                        <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
-                            <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
-                                🩺 Consulta Médica
-                            </h3>
-                        </div>
-
+                        
                         {/* Exámenes y Recetas */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Exámenes */}
@@ -279,6 +274,30 @@ export function ModalDetalleFicha({
                                 </table>
                             </div>
                         )}
+
+                        {/* Antecedentes adicionales */}
+                        <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
+                            <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+                                🩺 Antecedentes adicionales
+                            </h3>
+                            <div className="space-y-2">
+                                {ficha.paciente?.antecedentesAdicionales &&
+                                    <div className="bg-white px-3 py-2 rounded-lg text-gray-700">
+                                        • <strong>Antecedentes Adicionales:</strong> {ficha.paciente.antecedentesAdicionales}
+                                    </div>}
+                            </div>
+                        </div>
+
+                        <div className="flex">
+                            <span className="text-sm text-gray-500 mt-2"
+                            onClick={() => {
+                                router.push(`/modulos/ficha/${ficha.paciente.id}?fichaId=${ficha.id}`);
+                            }}>
+                                Editar
+                            </span>
+                        </div>
+
+
                     </div>
                 </div>
             )}

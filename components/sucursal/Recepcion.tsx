@@ -34,9 +34,9 @@ export default function Recepcion({
                     paciente: {
                         nombres: paciente.nombres.split(" ")[0],
                         apellidos: paciente.nombres.split(" ").slice(1).join(" "),
-                        rut: paciente.rut,
+                        numeroIdentidad: paciente.numeroIdentidad,
                         genero: paciente.genero,
-                        nombreSocial: paciente.nombre_social || ""
+                        nombreSocial: paciente.nombreSocial || ""
                     },
                     fechaLlegada: new Date(),
                     profesionalId: null,
@@ -68,8 +68,8 @@ export default function Recepcion({
 
     const handleSeleccionarPaciente = (arribo: IArribo) => {
         if(rol !== USER_ROLE.profesional) return;
-        setPacienteSeleccionado(arribo.paciente_id);
-        solicitarReserva(arribo.paciente_id, boxSeleccionado);
+        setPacienteSeleccionado(arribo.pacienteId);
+        solicitarReserva(arribo.pacienteId, boxSeleccionado);
     }
 
     return (<section className="w-2/5 md:w-80 h-full p-0.5 md:p-4">
@@ -96,7 +96,7 @@ export default function Recepcion({
                     </button>
                 </div>
             )}
-            {arribos.filter(a => a.fecha_atencion).length > 0 && rol === USER_ROLE.profesional && <div className="flex rounded p-1 md:p-2 text-gray-400 bg-gray-100 mb-2">
+            {arribos.filter(a => a.fechaAtencion).length > 0 && rol === USER_ROLE.profesional && <div className="flex rounded p-1 md:p-2 text-gray-400 bg-gray-100 mb-2">
                 <RiDragDropLine size="4rem" />
                 <span className="px-2 text-sm">Selecciona su paciente y el box</span>
             </div>}
@@ -112,24 +112,28 @@ export default function Recepcion({
                 </div>                
             </button>}
             <div className="flex flex-col gap-0.5 md:gap-2 overflow-y-auto">
-                {!loading && arribos.filter(a => a.fecha_atencion).length === 0 && (
+                {!loading && arribos.filter(a => a.fechaAtencion).length === 0 && (
                     <div className="text-center text-gray-400 mt-8">Sin pacientes en espera</div>
                 )}
-                {arribos.filter(a => a.fecha_atencion).map((arribo, idx) => (<div
+                {arribos.filter(a => a.fechaAtencion).map((arribo, idx) => (<div
                     key={`paciente-${idx}`}
-                    className={`flex items-center gap-0.5 md:gap-2 rounded-lg px-1 md:px-3 py-1 md:py-2 shadow-sm cursor-grab border border-pink-200 ${(arribo?.paciente_id?.id === pacienteSeleccionado?.id) ? "bg-pink-300 text-white" : "bg-pink-100 text-gray-500"}`}
+                    className={`flex items-center gap-0.5 md:gap-2 
+                        rounded-lg px-1 md:px-3 py-1 md:py-2 shadow-sm cursor-grab 
+                        border border-pink-200 
+                        ${(arribo?.pacienteId?.id === pacienteSeleccionado?.id) 
+                            ? "bg-pink-300 text-white" : "bg-pink-100 text-gray-500"}`}
                     onClick={() => handleSeleccionarPaciente(arribo)}
                 >
-                    {arribo.paciente_id?.genero === "F" && (
+                    {arribo.pacienteId?.genero === "F" && (
                         <AiOutlineWoman className="text-2xl text-pink-500" />
                     )}
-                    {arribo.paciente_id?.genero === "M" && (
+                    {arribo.pacienteId  ?.genero === "M" && (
                         <AiOutlineMan className="text-2xl text-blue-500" />
                     )}
-                    {arribo.paciente_id?.genero === "O" && (
+                    {arribo.pacienteId?.genero === "O" && (
                         <FaPersonCircleQuestion className="text-2xl text-neutral-500" />
                     )}
-                    <span className="font-medium">{arribo.paciente_id?.nombres} {arribo.paciente_id?.apellidos?.split(" ")[0]}</span>
+                    <span className="font-medium">{arribo.pacienteId?.nombres} {arribo.pacienteId?.apellidos?.split(" ")[0]}</span>
                 </div>))}
             </div>
         </div>}

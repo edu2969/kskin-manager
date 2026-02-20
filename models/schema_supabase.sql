@@ -31,6 +31,13 @@ CREATE TABLE especialidades (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Sistemas de Salud table
+CREATE TABLE sistemas_salud (
+    id SMALLINT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Profesional Especialidades junction table
 CREATE TABLE profesional_especialidades (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -53,7 +60,7 @@ CREATE TABLE pacientes (
     grupo_sanguineo VARCHAR(10),
     direccion TEXT,
     telefono VARCHAR(20),
-    sistema_salud_id UUID REFERENCES sistemas_salud(id),
+    sistema_salud_id SMALLINT REFERENCES sistemas_salud(id),
     alergias TEXT,
     operaciones TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -103,7 +110,7 @@ CREATE TABLE paciente_partos (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE paciente_higiene (
+CREATE TABLE ficha_higiene (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     ficha_id UUID NOT NULL REFERENCES fichas(id) ON DELETE CASCADE,
     cantidad_cigarrillos_semanales NUMERIC DEFAULT 0,

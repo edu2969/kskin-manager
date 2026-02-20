@@ -100,8 +100,6 @@ export default function ModalHistorico({
             ) : <HistoricoFichas
                     isOpen={show === 'historico'}
                     onClose={onClose}
-                    historico={historico}
-                    loading={loadingHistorico}
                     paciente={paciente}
                 />}           
         </div>

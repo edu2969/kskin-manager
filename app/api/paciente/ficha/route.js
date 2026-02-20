@@ -5,13 +5,16 @@ import { USER_ROLE } from "@/app/utils/constants";
 
 // Initialize Supabase client
 
-export async function GET(req, { params }) {
+export async function GET(req) {
     try {
-        console.log("[GET] /api/paciente/historico - Iniciando petición");
+        console.log("[GET] /api/paciente/ficha - Iniciando petición");
 
-        const { id } = await params;
-        if (!id) {
-            return NextResponse.json({ error: 'Ficha ID is required' }, { status: 400 });
+        const { searchParams } = req.nextUrl;
+        const pacienteId = searchParams.get("pacienteId");
+        const fichaId = searchParams.get("fichaId");
+        
+        if (!pacienteId && !fichaId) {
+            return NextResponse.json({ error: 'Paciente ID or Ficha ID is required' }, { status: 400 });
         }
 
         const { user } = await getAuthenticatedUser();
@@ -42,7 +45,7 @@ export async function GET(req, { params }) {
                     numero_identidad,
                     fecha_nacimiento,
                     genero,
-                    sistema_salud_id,
+                    sistemas_salud ( id, nombre ),
                     alergias,
                     antecedentes_adicionales,
                     antecedentes:paciente_antecedentes (
@@ -89,17 +92,20 @@ export async function GET(req, { params }) {
                 created_at,
                 finished_at
             `)
-            .eq('id', id)
-            .single();
+            .eq(fichaId ? 'id' : 'paciente_id', fichaId || pacienteId)
+            .order('created_at', { ascending: false })
+            .single();        
 
         if (error) {
-            console.log("ERROR", error);
+            console.log("ERROR fetching ficha:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
         if (!ficha) {
             return NextResponse.json({ error: 'Ficha not found' }, { status: 404 });
         }
+
+        console.log("Ficha encontrada:", ficha);
 
         // Transform the data to match the IFichaDetalle interface
         const fichaDetalle = {
@@ -111,7 +117,7 @@ export async function GET(req, { params }) {
                 numeroIdentidad: ficha.paciente.numero_identidad,
                 fechaNacimiento: ficha.paciente.fecha_nacimiento,
                 genero: ficha.paciente.genero,
-                sistemaSalud: ficha.paciente.sistema_salud,
+                sistemaSaludId: ficha.paciente.sistemas_salud.id,
                 aplicaAlergias: ficha.paciente.aplica_alergias,
                 alergias: ficha.paciente.alergias ? ficha.paciente.alergias.split(',') : [],
                 antecedentes: ficha.paciente.antecedentes?.map((a) => a.detalles),
@@ -139,8 +145,7 @@ export async function GET(req, { params }) {
             createdAt: ficha.created_at,
             finishedAt: ficha.finished_at,
         };
-
-        // Return the ficha details
+        
         return NextResponse.json(fichaDetalle);
     } catch (err) {
         console.error('Error fetching ficha:', err);

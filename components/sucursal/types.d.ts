@@ -5,35 +5,64 @@ export interface IUsuario {
     rol: number;
 }
 
+export interface ISitemaSalud {
+    nombre: string;
+    codigoIso: string;
+}
+
 export interface IPaciente {
     id?: string;
     nombres: string;
     apellidos: string;
+    direccion: string;
+    telefono: string;
+    sistemaSalud: ISitemaSalud;
     genero: string;
-    rut: string;
-    nombre_social?: string | null;
+    numeroIdentidad: string;
+    nombreSocial?: string | null;
     nuevo: boolean;
-    trato_especial?: boolean;
+    tratoEspecial?: boolean;
+    fechaNacimiento: Date | null;
+    email: string;
+    alergias?: string;
 }
 
 export interface IProfesional {
     id: string;
-    usuario_id: IUsuario;
+    usuarioId: IUsuario;
+    especialidades: string[];
 }
 
 export interface IBox {
     id: string;
     numero: number;
-    paciente_id: IPaciente;
-    profesional_id: IProfesional;
+    pacienteId: IPaciente;
+    profesionalId: IProfesional;
     ocupado: boolean;
-    inicio_atencion?: Date | null;
-    termino_atencion?: Date | null;    
+    inicioAtencion?: Date | null;
+    terminoAtencion?: Date | null;    
 }
 
 export interface IArribo {
     id: string;
-    paciente_id: IPaciente;
-    fecha_atencion: Date | null;
-    fecha_termino: Date | null;
+    pacienteId: IPaciente;
+    fechaAtencion: Date | null;
+    fechaTermino: Date | null;
+}
+
+export interface IParto {
+    id: string;
+    tipo: 'normal' | 'cesarea';
+    fecha: Date;
+    genero: string;
+    abortado: boolean;
+}
+
+export interface IHigiene {    
+    cantidadCigarrillosSemanales: number,
+    cantidadAguaDiariaLitros: number,
+    horasEjercicioSemanales: number,
+    nivelEstres: 'bajo' | 'medio' | 'alto',
+    calidadDormir: 'buena' | 'regular' | 'mala',
+    habitoAlimenticio: string;
 }

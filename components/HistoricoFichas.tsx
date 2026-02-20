@@ -14,22 +14,35 @@ import { IFichaHistorica } from "./types";
 import { IPaciente } from "./sucursal/types";
 import Image from "next/image";
 import { ModalDetalleFicha } from "./modals/ModalDetalleFicha";
+import { useQuery } from "@tanstack/react-query";
 
 export default function HistoricoFichas({
     isOpen,
     onClose,
-    historico = [],
-    loading = false,
     paciente
 }: {
     isOpen: boolean;
     onClose: () => void;
-    historico: IFichaHistorica[];
-    loading: boolean;
     paciente: IPaciente | null;
 }) {
     const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
     const [modalDetalle, setModalDetalle] = useState(false);
+
+    const { data: historico, isLoading: loadingHistorico } = useQuery<IFichaHistorica[]>({
+        queryKey: ['historicoFichas', paciente?.id],
+        queryFn: async () => {
+            if (!paciente?.id) return [];
+            const resp = await fetch(`/api/paciente/historico?pacienteId=${paciente.id}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                console.log("Histórico completo cargado:", data);
+                return data.historico || [];
+            } else {
+                throw new Error("Error al cargar el histórico de fichas.");
+            }
+        },
+        enabled: isOpen && !!paciente?.id
+    });
 
     const handleVerDetalle = (fichaId: string) => {
         setFichaSeleccionada(fichaId);
@@ -63,7 +76,7 @@ export default function HistoricoFichas({
                                     Histórico Médico
                                 </DialogTitle>
                                 <p className="text-white/90 text-sm mt-1">
-                                    {paciente?.nombres} {paciente?.apellidos} • {historico.length} consulta{historico.length !== 1 ? 's' : ''} registrada{historico.length !== 1 ? 's' : ''}
+                                    {paciente?.nombres} {paciente?.apellidos} • {historico?.length} consulta{historico?.length !== 1 ? 's' : ''} registrada{historico?.length !== 1 ? 's' : ''}
                                 </p>
                             </div>
                         </div>
@@ -71,14 +84,14 @@ export default function HistoricoFichas({
 
                     {/* Contenido */}
                     <div className="flex-1 overflow-hidden">
-                        {loading ? (
+                        {loadingHistorico ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center">
                                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6a3858] mx-auto mb-4"></div>
                                     <p className="text-gray-600">Cargando histórico médico...</p>
                                 </div>
                             </div>
-                        ) : historico.length === 0 ? (
+                        ) : historico?.length === 0 ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center text-gray-500">
                                     <FaClipboardList size={48} className="mx-auto mb-4 opacity-30" />
@@ -89,7 +102,7 @@ export default function HistoricoFichas({
                         ) : (
                             <div className="p-2 md:p-6 overflow-y-auto h-full">
                                 <div className="grid gap-2">
-                                    {historico.map((ficha) => (
+                                    {historico && historico.map((ficha) => (
                                         <div
                                             key={ficha.fichaId}
                                             className="bg-gradient-to-r from-[#f6eedb] to-[#fad379]/20 border border-[#d5c7aa] rounded-lg md:p-3 hover:shadow-md transition-all cursor-pointer"
