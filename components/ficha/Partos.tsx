@@ -1,18 +1,14 @@
-import { UseFormRegister, UseFormSetValue, useWatch, useFieldArray, Control } from "react-hook-form";
+import { UseFormRegister, useFieldArray, Control } from "react-hook-form";
 import { IFichaForm, IParto } from "./types";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FaCaretSquareRight } from "react-icons/fa";
 
 export default function Partos({ 
     register,
-    setValue,
-    control,
-    onChange
+    control
 }: { 
     register: UseFormRegister<IFichaForm>;
-    setValue: UseFormSetValue<IFichaForm>;
     control: Control<IFichaForm>;
-    onChange: (field: string, value: any) => void;
 }) {
     const { fields, append, remove } = useFieldArray({
         control,
@@ -27,13 +23,10 @@ export default function Partos({
             tipo: ""
         };
         append(nuevoParto);
-        onChange("partos", [...fields, nuevoParto]);
     };
 
     const handleRemoverParto = (index: number) => {
-        remove(index);
-        const partosActualizados = fields.filter((_, i) => i !== index);
-        onChange("partos", partosActualizados);
+        remove(index);        
     };
 
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -70,17 +63,13 @@ export default function Partos({
                                     <td className="border border-[#d5c7aa] p-2 text-sm">
                                         <input
                                             type="date"
-                                            {...register(`partos.${index}.fecha`, {
-                                                onChange: (e) => onChange("partos", fields)
-                                            })}
+                                            {...register(`partos.${index}.fecha`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                         />
                                     </td>
                                     <td className="border border-[#d5c7aa] p-2">
                                         <select
-                                            {...register(`partos.${index}.genero`, {
-                                                onChange: (e) => onChange("partos", fields)
-                                            })}
+                                            {...register(`partos.${index}.genero`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                         >
                                             <option value="">Seleccionar</option>
@@ -91,9 +80,7 @@ export default function Partos({
                                     </td>
                                     <td className="border border-[#d5c7aa] p-2">
                                         <select
-                                            {...register(`partos.${index}.tipo`, {
-                                                onChange: (e) => onChange("partos", fields)
-                                            })}
+                                            {...register(`partos.${index}.tipo`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                                         >
                                             <option value="">Seleccionar</option>

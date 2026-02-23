@@ -164,14 +164,7 @@ CREATE TABLE paciente_metodos_anticonceptivos (
 -- Examenes table
 CREATE TABLE ficha_examenes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    ficha_id UUID NOT NULL REFERENCES fichas(id) ON DELETE CASCADE,
-    tipo VARCHAR(100) NOT NULL,
-    fecha_solicitud TIMESTAMP,
-    fecha_resultado TIMESTAMP,
-    resultado TEXT,
-    estado VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    codigo TEXT NOT NULL    
 );
 
 -- Arribox table

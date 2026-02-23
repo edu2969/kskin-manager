@@ -4,8 +4,9 @@
  */
 
 import { NextRequest } from "next/server";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { APIResponse } from "@/lib/supabase-helpers";
+import { Session } from "@supabase/supabase-js";
 
 // ===============================================
 // TIPOS DE DATOS
@@ -23,7 +24,7 @@ interface LoginResponse {
     nombre: string;
     rol: number;
   };
-  session: any;
+  session: Session;
 }
 
 // ===============================================
@@ -45,12 +46,16 @@ async function loginWithSupabase(email: string, password: string): Promise<Login
     throw new Error('Error en la autenticación');
   }
 
+  console.log("Usuario autenticado con Supabase:", data.user);
+
   // 2. Obtener información adicional del usuario y sus cargos
   const { data: usuario, error: userError } = await supabase
     .from('usuarios')
     .select(`*`)
     .eq('id', data.user.id)
-    .single();
+    .maybeSingle();
+
+  console.log("Datos adicionales del usuario:", usuario, "Error:", userError);
 
   if (userError || !usuario) {
     // Si no existe en usuarios, crearlo (primera vez)
@@ -89,8 +94,6 @@ async function loginWithSupabase(email: string, password: string): Promise<Login
 // ===============================================
 
 export async function POST(req: NextRequest) {
-  const startTime = Date.now();
-
   try {
     const body: LoginRequest = await req.json();
     const { email, password } = body;
@@ -115,9 +118,10 @@ export async function POST(req: NextRequest) {
 
     return response;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error en el login";
     return APIResponse.error(
-      error.message || "Error en el login",
+      message,
       401
     );
   }
@@ -127,7 +131,7 @@ export async function POST(req: NextRequest) {
 // ENDPOINT PARA LOGOUT
 // ===============================================
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE() {
   try {
     // Logout con Supabase
     const { error } = await supabase.auth.signOut();
@@ -139,7 +143,7 @@ export async function DELETE(req: NextRequest) {
       message: 'Logout exitoso'
     });
 
-  } catch (error) {
+  } catch {
     return APIResponse.error("Error en logout", 500);
   }
 }

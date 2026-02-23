@@ -133,7 +133,7 @@ export default function HistoricoFichas({
                                                         </div>                                                        
                                                     </div>
 
-                                                    <div className="flex flex-col justify-between gap-2">
+                                                    <div className="w-1/2 flex flex-col justify-between gap-2">
                                                         {/* Fecha */}
                                                         <div className="flex justify-end items-start gap-1 text-[#ac9164]">
                                                             <FaCalendarAlt size={18} className="mt-1" />

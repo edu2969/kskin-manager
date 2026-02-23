@@ -44,9 +44,9 @@ export default function Higiene({
                                 const nextValue = e.target.checked ? Math.max(cantidadCigarrillosSemanales, 1) : 0;
                                 setValue("higiene.cantidadCigarrillosSemanales", nextValue, { shouldDirty: true });
                             }}
-                            className="text-[#ac9164]"
+                            className="text-[#ac9164] w-6 h-6"
                         />
-                        <label className="text-sm text-[#68563c]">Fuma</label>
+                        <label className="text-sm text-[#68563c] mx-2">Fuma</label>
                         {cantidadCigarrillosSemanales > 0 && (
                             <div className="flex items-center gap-1">
                                 <input
@@ -74,7 +74,7 @@ export default function Higiene({
                             type="number"
                             min="0"
                             step="0.5"
-                            {...register("higiene.horasEjerciciosSemanales", { valueAsNumber: true })}
+                            {...register("higiene.horasEjercicioSemanales", { valueAsNumber: true })}
                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
                         />
                     </div>

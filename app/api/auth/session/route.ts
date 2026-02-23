@@ -1,4 +1,3 @@
-import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { APIResponse } from "@/lib/supabase-helpers";
 
@@ -13,6 +12,7 @@ interface SessionResponse {
 }
 
 async function getSupabaseSession(): Promise<SessionResponse> {
+  console.log("Obteniendo sesión de Supabase...");
   // 1. Obtener usuario actual de Supabase Auth
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
@@ -32,6 +32,7 @@ async function getSupabaseSession(): Promise<SessionResponse> {
     .single();
 
   if (userError || !usuario) {
+    console.log("Error obteniendo usuario adicional:", userError);
     // Retornar datos básicos del auth
     return {
       user: {
@@ -59,9 +60,7 @@ async function getSupabaseSession(): Promise<SessionResponse> {
 // HANDLER PRINCIPAL
 // ===============================================
 
-export async function GET(req: NextRequest) {
-  const startTime = Date.now();
-
+export async function GET() {
   try {
     // Obtener sesión directamente de Supabase
     const sessionData = await getSupabaseSession();
@@ -81,11 +80,12 @@ export async function GET(req: NextRequest) {
       message: 'Session active'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error obteniendo sesión"; 
     return APIResponse.error(
       "Error obteniendo sesión",
       500,
-      process.env.NODE_ENV === 'development' ? error.message : undefined
+      process.env.NODE_ENV === 'development' ? message : undefined
     );
   }
 }
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 // ENDPOINT PARA REFRESH DE SESIÓN
 // ===============================================
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const { data, error } = await supabase.auth.refreshSession();
 
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       message: 'Sesión refrescada exitosamente'
     });
 
-  } catch (error) {
+  } catch {
     return APIResponse.error("Error interno en refresh", 500);
   }
 }

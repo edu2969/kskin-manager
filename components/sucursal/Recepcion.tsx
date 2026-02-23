@@ -7,9 +7,10 @@ import { FaPersonCircleQuestion } from "react-icons/fa6";
 import { GiArchiveRegister } from "react-icons/gi";
 import toast from "react-hot-toast";
 import Loader from "../Loader";
-import { IArribo, IBox, IPaciente } from "./types";
+import { IArribo, IBox, INuevoArribo, IPaciente } from "./types";
 import ModalHistorico from "@/components/modals/ModalHistorico";
 import ModalRegistroPaciente from "@/components/modals/ModalRegistroPaciente";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Recepcion({
     rol, arribos, nombreProfesional, pacienteSeleccionado, setPacienteSeleccionado, boxSeleccionado, solicitarReserva
@@ -20,29 +21,26 @@ export default function Recepcion({
     pacienteSeleccionado: IPaciente | null;
     setPacienteSeleccionado: React.Dispatch<React.SetStateAction<IPaciente | null>>;
     boxSeleccionado: IBox | null;
-    solicitarReserva: (paciente: IPaciente | null, box: IBox | null) => void;
+    solicitarReserva: (paciente: INuevoArribo | null, box: IBox | null) => void;
 }) {
     const [loading, setLoading] = useState(false);
     const [showNuevoPaciente, setShowNuevoPaciente] = useState(false);
     const [showModalHistorico, setShowModalHistorico] = useState<string | boolean>(false);
+    const queryClient = useQueryClient();
 
-    const registrarArribo = async (paciente: IPaciente) => {
+    const registrarArribo = async (nuevoArribo: INuevoArribo) => {
         setLoading(true);
         try {
-            const body = !paciente.id
-                ? {
+            const nombreCompletoSeparado = (nuevoArribo.nombreCompleto || "").split(" ");
+            const cantidadNombre = nombreCompletoSeparado.length === 5 ? 3 : nombreCompletoSeparado.length === 2 ? 1 : 2;            
+            const body = {
                     paciente: {
-                        nombres: paciente.nombres.split(" ")[0],
-                        apellidos: paciente.nombres.split(" ").slice(1).join(" "),
-                        numeroIdentidad: paciente.numeroIdentidad,
-                        genero: paciente.genero,
-                        nombreSocial: paciente.nombreSocial || ""
+                        nombres: nombreCompletoSeparado.slice(0, cantidadNombre).join(" "),
+                        apellidos: nombreCompletoSeparado.slice(cantidadNombre).join(" "),
+                        numeroIdentidad: nuevoArribo.numeroIdentidad,
+                        genero: nuevoArribo.genero,
+                        nombreSocial: nuevoArribo.nombreSocial || ""
                     },
-                    fechaLlegada: new Date(),
-                    profesionalId: null,
-                }
-                : {
-                    pacienteId: paciente.id,
                     fechaLlegada: new Date(),
                     profesionalId: null,
                 };
@@ -56,6 +54,7 @@ export default function Recepcion({
             const data = await res.json();
             if (res.ok) {
                 setPacienteSeleccionado(null);
+                queryClient.invalidateQueries({ queryKey: ["panoramica"] });
             } else {
                 toast.error(data.error || "Error al registrar arribo");
             }
@@ -68,8 +67,17 @@ export default function Recepcion({
 
     const handleSeleccionarPaciente = (arribo: IArribo) => {
         if(rol !== USER_ROLE.profesional) return;
-        setPacienteSeleccionado(arribo.pacienteId);
-        solicitarReserva(arribo.pacienteId, boxSeleccionado);
+        setPacienteSeleccionado(arribo.paciente);
+        solicitarReserva(!arribo.paciente.id ? {
+            id: arribo.paciente.id,
+            numeroIdentidad: arribo.paciente.numeroIdentidad,
+            nombreCompleto: arribo.paciente.nombres + " " + arribo.paciente.apellidos,
+            genero: arribo.paciente.genero,
+            tratoEspecial: arribo.paciente.tratoEspecial,
+            nombreSocial: arribo.paciente.nombreSocial || undefined
+        } : {
+            id: arribo.paciente.id
+        }, boxSeleccionado);
     }
 
     return (<section className="w-2/5 md:w-80 h-full p-0.5 md:p-4">
@@ -88,7 +96,7 @@ export default function Recepcion({
             {rol === USER_ROLE.profesional && (
                 <div className="mb-1">
                     <button
-                        className="mb-4 px-4 pt-2 pb-1 md:px-3 md:py-2 rounded-xl bg-[#66754c] hover:bg-[#8c9b6d] text-white font-semibold shadow-md shadow-neutral-400 transition"
+                        className="w-full mb-4 px-4 pt-2 pb-1 md:px-3 md:py-2 rounded-xl bg-[#66754c] hover:bg-[#8c9b6d] text-white font-semibold shadow-md shadow-neutral-400 transition"
                         onClick={() => setShowModalHistorico('buscar')}
                     >
                         <BsFileEarmarkMedicalFill size="3rem" className="m-auto"/>
@@ -100,7 +108,6 @@ export default function Recepcion({
                 <RiDragDropLine size="4rem" />
                 <span className="px-2 text-sm">Selecciona su paciente y el box</span>
             </div>}
-            {rol === USER_ROLE.recepcionista && 
             <button className="mb-4 pl-4 py-1 md:px-3 md:py-2 rounded-xl bg-[#66754c] hover:bg-[#8c9b6d] text-white font-semibold shadow-md shadow-neutral-400 transition"
                 onClick={() => {
                     setShowNuevoPaciente(true);
@@ -110,30 +117,30 @@ export default function Recepcion({
                     <GiArchiveRegister size="2rem"/>
                     <p className="text-left">Recibir paciente</p>
                 </div>                
-            </button>}
+            </button>
             <div className="flex flex-col gap-0.5 md:gap-2 overflow-y-auto">
-                {!loading && arribos.filter(a => a.fechaAtencion).length === 0 && (
+                {!loading && arribos.length === 0 && (
                     <div className="text-center text-gray-400 mt-8">Sin pacientes en espera</div>
                 )}
-                {arribos.filter(a => a.fechaAtencion).map((arribo, idx) => (<div
+                {arribos && arribos.map((arribo, idx) => (<div
                     key={`paciente-${idx}`}
                     className={`flex items-center gap-0.5 md:gap-2 
                         rounded-lg px-1 md:px-3 py-1 md:py-2 shadow-sm cursor-grab 
                         border border-pink-200 
-                        ${(arribo?.pacienteId?.id === pacienteSeleccionado?.id) 
+                        ${(arribo?.paciente?.id === pacienteSeleccionado?.id) 
                             ? "bg-pink-300 text-white" : "bg-pink-100 text-gray-500"}`}
                     onClick={() => handleSeleccionarPaciente(arribo)}
                 >
-                    {arribo.pacienteId?.genero === "F" && (
+                    {arribo.paciente.genero === "F" && (
                         <AiOutlineWoman className="text-2xl text-pink-500" />
                     )}
-                    {arribo.pacienteId  ?.genero === "M" && (
+                    {arribo.paciente.genero === "M" && (
                         <AiOutlineMan className="text-2xl text-blue-500" />
                     )}
-                    {arribo.pacienteId?.genero === "O" && (
+                    {arribo.paciente.genero === "O" && (
                         <FaPersonCircleQuestion className="text-2xl text-neutral-500" />
                     )}
-                    <span className="font-medium">{arribo.pacienteId?.nombres} {arribo.pacienteId?.apellidos?.split(" ")[0]}</span>
+                    <span className="font-medium">{arribo.paciente.nombres} {arribo.paciente.apellidos?.split(" ")[0]}</span>
                 </div>))}
             </div>
         </div>}

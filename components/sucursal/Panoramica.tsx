@@ -2,67 +2,62 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CiPower } from "react-icons/ci";
-import { useOnVisibilityChange } from '@/components/uix/useOnVisibilityChange';
+import { useOnVisibilityChange } from '@/components/prefabs/useOnVisibilityChange';
 import { Toaster } from 'react-hot-toast';
 import { useRouter } from "next/navigation";
 import Recepcion from "./Recepcion";
 import Boxes from "./Boxes";
 import ModalConfirmacionReserva from "../modals/ModalConfirmacionReserva";
-import { IBox, IPaciente, IArribo } from "./types";
+import { IBox, INuevoArribo, IPaciente } from "./types";
 import { USER_ROLE } from "@/app/utils/constants";
 import toast from "react-hot-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthorization } from "@/lib/auth/useAuthorization";
 
 export default function Panoramica() {
     const [pacienteSeleccionado, setPacienteSeleccionado] = useState<IPaciente | null>(null);
     const [boxSeleccionado, setBoxSeleccionado] = useState<IBox | null>(null);
-
-    const [showModalConfirmacionReserva, setShowModalConfirmacionReserva] = useState(false);
-    const [arribos, setArribos] = useState<IArribo[]>([]);
-    const [boxes, setBoxes] = useState<IBox[]>([]);
-    const [lastUpdate, setLastUpdate] = useState(new Date());
-
-    const [rol, setRol] = useState(0);
-    const auth = useAuthorization();
+    const [showModalConfirmacionReserva, setShowModalConfirmacionReserva] = useState(false);    
     const router = useRouter();
+    const [currentLastUpdate, setCurrentLastUpdate] = useState(new Date());
+    const queryClient = useQueryClient();
+    const { user } = useAuthorization();
+    const rol = user?.rol || 0;
 
-    const fetchVistaPanoramica = async () => {
-        const response = await fetch('/api/panoramica');
-        const data = await response.json();
-        setArribos(data.arribos || []);
-        setBoxes(data.boxes || []);
-        console.log("ARRIBOS", data.arribos);
-        console.log("BOXES", data.boxes);
-    };
+    const { data: panoramica } = useQuery({
+        queryKey: ["panoramica"],
+        queryFn: async () => {
+            const res = await fetch('/api/panoramica');
+            if (!res.ok) throw new Error("Error fetching panoramica");
+            const data = await res.json();
+            console.log("Panoramica data fetched", data);
+            return data;
+        }
+    });
+    
+    const { data: lastUpdate } = useQuery({
+        queryKey: ["lastUpdate"],
+        queryFn: async () => {
+            const res = await fetch('/api/panoramica/lastUpdate');
+            if (!res.ok) throw new Error("Error fetching last update");
+            const data = await res.json();
+            return data.updatedAt ? new Date(data.updatedAt) : new Date();
+        }
+    });
 
     useEffect(() => {
-        const fetchAll = async () => {
-            try {
-                await Promise.all([
-                    fetchVistaPanoramica(),
-                ]);
-            } catch (error) {
-                console.error('Error fetching initial data:', error);
-            } 
-        };
-        fetchAll();
-        console.log("--------------------> USER CONTEXT EN PANORAMICA", auth.user);
-        setRol(auth.user?.rol || 0);
-    }, []);
+        console.log("User: ", user);
+    }, [user]);
+
+    useEffect(() => {
+        if(currentLastUpdate && lastUpdate && lastUpdate > currentLastUpdate) {
+            setCurrentLastUpdate(lastUpdate);
+            queryClient.invalidateQueries({ queryKey: ["panoramica"] });
+        }
+    }, [lastUpdate, setCurrentLastUpdate, currentLastUpdate, queryClient]);
 
     useOnVisibilityChange(async () => {
-        await fetch('/api/panoramica/lastUpdate')
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok && data.updatedAt) {
-                    const updatedAt = new Date(data.updatedAt);
-                    if (updatedAt > lastUpdate) {
-                        setLastUpdate(updatedAt);
-                        fetchVistaPanoramica();
-                    }
-                }
-            })
-            .catch(() => { });
+        queryClient.invalidateQueries({ queryKey: ["lastUpdate"] });
     });
 
     const nombreProfesional = (email: string) => {
@@ -74,41 +69,20 @@ export default function Panoramica() {
     const timers = useRef<Record<string, NodeJS.Timeout>>({});        
         
     const iniciarProgreso = (boxId: string) => {
-        if (boxes === null) return;
+        if (panoramica.boxes === null) return;
         if (timers.current[boxId]) clearInterval(timers.current[boxId]);
-        setBoxes((prev) =>
-            prev.map((b) =>
-                b.id === boxId
-                    ? { ...b, progreso: 0 }
-                    : b
-            )
-        );
         const duracion = 60;
         console.log("Iniciando progreso box", boxId, "duracion", duracion);
         let progreso = 0;
         timers.current[boxId] = setInterval(() => {
-            progreso += 1;
-            setBoxes((prev) =>
-                prev.map((b) =>
-                    b.id === boxId
-                        ? { ...b, progreso: progreso / duracion }
-                        : b
-                )
-            );
+            progreso += 1;            
             if (progreso >= duracion) {
                 clearInterval(timers.current[boxId]);
-                setBoxes((prev) =>
-                    prev.map((b) =>
-                        b.id === boxId
-                            ? { ...b, ocupado: false, paciente: null, progreso: 0 }
-                            : b
-                    )
-                );
             }
         }, 1000);
     };
 
-    const handleSolicitarReserva = (paciente: IPaciente | null, box: IBox | null) => {
+    const handleSolicitarReserva = (paciente: INuevoArribo | null, box: IBox | null) => {
         console.log(rol, "Solicitando reserva para paciente", paciente, "en box", box);
         if(rol !== USER_ROLE.profesional) return;
         if(!paciente || !box) {
@@ -122,15 +96,15 @@ export default function Panoramica() {
     return (
         <main className="flex h-screen bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60]">
             <Recepcion rol={rol}
-                nombreProfesional={nombreProfesional("None")}
+                nombreProfesional={nombreProfesional(panoramica?.profesional?.email || "")}
                 pacienteSeleccionado={pacienteSeleccionado}
                 setPacienteSeleccionado={setPacienteSeleccionado}
                 boxSeleccionado={boxSeleccionado}
-                arribos={arribos}
+                arribos={panoramica?.arribos || []}
                 solicitarReserva={handleSolicitarReserva} />
 
             <Boxes role={rol}
-                boxes={boxes}
+                boxes={panoramica?.boxes || []}
                 pacienteSeleccionado={pacienteSeleccionado}
                 boxSeleccionado={boxSeleccionado}
                 setBoxSeleccionado={setBoxSeleccionado}
@@ -144,10 +118,7 @@ export default function Panoramica() {
                 setBox={setBoxSeleccionado}
                 iniciarProgreso={iniciarProgreso}
                 onClose={() => {
-                    setPacienteSeleccionado(null);
-                    setBoxSeleccionado(null);
                     setShowModalConfirmacionReserva(false);
-                    fetchVistaPanoramica();
                 }} />}
 
             <button

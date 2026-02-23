@@ -1,6 +1,7 @@
 import { UseFormRegisterReturn } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useContext, useCallback } from "react";
 import Loader from "../Loader";
+import { AutoSaveContext } from "../../context/AutoSaveContext";
 
 type SelectorProps<T> = {
     options: T[];
@@ -11,7 +12,11 @@ type SelectorProps<T> = {
     register: UseFormRegisterReturn;
     isLoading?: boolean;
     onChange?: (value: string | number) => void;
-    disableAutoSelect?: boolean; // Nueva prop para deshabilitar auto-selección
+    disableAutoSelect?: boolean;
+    // ✅ NUEVA prop para especificar el campo para auto-guardado
+    autoSaveField?: string;
+    autoSaveAsNumber?: boolean;  // ✅ Mantener esta prop para casos específicos
+    autoSaveAsDate?: boolean;    // ✅ Nueva prop para fechas
 };
 
 export function Selector<T>({
@@ -23,14 +28,34 @@ export function Selector<T>({
     register,
     isLoading,
     onChange,
-    disableAutoSelect = false, // Por defecto false para mantener comportamiento actual
+    disableAutoSelect = false,
+    autoSaveField, // Nueva prop
+    autoSaveAsNumber = false, // Nueva prop
+    autoSaveAsDate = false,   // Nueva prop
 }: SelectorProps<T>) {
 
-    // Seleccionar automáticamente si solo hay una opción (solo si no está deshabilitado)
+    // ✅ Hook opcional para auto-guardado (sin error si no existe contexto)
+    const autoSaveContext = useContext(AutoSaveContext);
+
+    // ✅ Función helper para auto-guardado con useCallback apropiado
+    const handleAutoSave = useCallback((value: string | number) => {
+        if (autoSaveContext && autoSaveField) {
+            let processedValue: string | number | Date = value;
+            
+            if (autoSaveAsNumber) {
+                processedValue = value ? Number(value) : 0;
+            } else if (autoSaveAsDate) {
+                processedValue = value ? new Date(value).toISOString().split('T')[0] : "";
+            }
+            
+            autoSaveContext.saveField(autoSaveField, processedValue);
+        }
+    }, [autoSaveContext, autoSaveField, autoSaveAsNumber, autoSaveAsDate]);
+
+    // Seleccionar automáticamente si solo hay una opción
     useEffect(() => {
         if (options && options.length === 1 && !isLoading && !disableAutoSelect) {
             const singleValue = getValue(options[0]);
-            // Simular un cambio en el select para que react-hook-form lo detecte
             const event = new Event('change', { bubbles: true });
             Object.defineProperty(event, 'target', {
                 writable: false,
@@ -38,8 +63,11 @@ export function Selector<T>({
             });
             register.onChange(event);
             onChange?.(singleValue);
+            
+            // ✅ Auto-guardar cuando se auto-selecciona
+            handleAutoSave(singleValue);
         }
-    }, [options, isLoading, getValue, register, onChange, disableAutoSelect]);
+    }, [options, isLoading, getValue, register, onChange, disableAutoSelect, handleAutoSave]);
 
     return (
         <div className="relative w-full">
@@ -51,6 +79,9 @@ export function Selector<T>({
                 onChange={e => {
                     register.onChange(e);
                     onChange?.(e.target.value);
+                    
+                    // ✅ Auto-guardar en cada cambio
+                    handleAutoSave(e.target.value);
                 }}
                 disabled={isLoading}
                 value={options && options.length === 1 && !isLoading && !disableAutoSelect ? getValue(options[0]) : undefined}

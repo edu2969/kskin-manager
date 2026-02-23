@@ -37,7 +37,8 @@ export async function GET() {
     const { data: arribos, error: arribosError } = await supabase
         .from("arribos")
         .select("*, paciente_id(*)")
-        .not("fecha_atencion", "is", null);
+        .is("fecha_atencion", null)
+        .is("fecha_termino", null);
 
     if (arribosError) {
         console.log("[GET] /api/panoramica - Error al consultar arribos", arribosError);
@@ -45,5 +46,30 @@ export async function GET() {
     }
 
     console.log("[GET] /api/panoramica - Datos obtenidos correctamente");
-    return NextResponse.json({ arribos, boxes });
+    return NextResponse.json({ arribos: arribos.map(a => ({
+        paciente: {
+            id: a.paciente_id.id,
+            nombres: a.paciente_id.nombres,
+            apellidos: a.paciente_id.apellidos,
+            genero: a.paciente_id.genero
+        },
+        fechaAtencion: a.fecha_atencion,
+        fechaTermino: a.fecha_termino
+    })), boxes: boxes.map(b => ({
+        id: b.id,
+        numero: b.numero,
+        paciente: b.paciente_id ? {
+            id: b.paciente_id.id,
+            nombres: b.paciente_id.nombres,
+            apellidos: b.paciente_id.apellidos,
+            genero: b.paciente_id.genero
+        } : null,
+        profesional: b.profesional_id ? {
+            id: b.profesional_id.id,
+            nombres: b.profesional_id.nombres,
+            apellidos: b.profesional_id.apellidos
+        } : null,
+        fechaInicio: b.fecha_inicio,
+        fechaTermino: b.fecha_termino
+    })) });
 }

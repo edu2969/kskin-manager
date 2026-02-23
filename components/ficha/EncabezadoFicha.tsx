@@ -1,6 +1,6 @@
-import { IPaciente, IProfesional } from "../sucursal/types";
+import { IPaciente } from "../sucursal/types";
 import { useState } from "react";
-import { toast } from "react-hot-toast";
+import HistoricoFichas from "../HistoricoFichas";
 
 export default function EncabezadoFicha({
     paciente,
@@ -14,24 +14,7 @@ export default function EncabezadoFicha({
         especialidades: string[];
     } | null
 }) {
-    const [loadingHistorico, setLoadingHistorico] = useState(false);
-    const [modalHistorico, setModalHistorico] = useState(false);
-    const [historico, setHistorico] = useState([]);
-
-    const fetchHistorico = async () => {
-        setLoadingHistorico(true);
-        if (!paciente.id) return;
-        const resp = await fetch(`/api/paciente/historico?pacienteId=${paciente.id}`);
-        if (resp.ok) {
-            const data = await resp.json();
-            console.log("Histórico completo cargado:", data);
-            setHistorico(data.historico);
-            setModalHistorico(true);
-        } else {
-            toast.error("Error al cargar el histórico de fichas.");
-        }
-        setLoadingHistorico(false);
-    };
+    const [showHistorico, setShowHistorico] = useState(false);
 
     return <div className="mb-1 md:mb-4">
         <div className="bg-[#f6eedb] rounded-lg p-4 shadow border border-[#d5c7aa]">
@@ -49,7 +32,7 @@ export default function EncabezadoFicha({
                             : "Cargando..."}
                     </div>
                     <div className="text-sm text-[#66754c]">
-                        {paciente?.rut}
+                        {paciente?.numeroIdentidad}
                         {paciente?.fechaNacimiento
                             ? ` • ${new Date(
                                 paciente.fechaNacimiento
@@ -71,14 +54,18 @@ export default function EncabezadoFicha({
             {/* Histórico */}
             <button
                 className="mt-3 pt-3 border-t border-[#d5c7aa] w-full text-left"
-                onClick={async () => {
-                    fetchHistorico();
-                }}
+                onClick={() => setShowHistorico(true)}
             >
                 <div className="text-xs text-[#8e9b6d] hover:text-[#68563c] transition-colors cursor-pointer">
                     📋 Ver histórico de fichas
                 </div>
             </button>
         </div>
+            
+        <HistoricoFichas
+            paciente={paciente || null}
+            isOpen={showHistorico}
+            onClose={() => setShowHistorico(false)}
+        />
     </div>;
 }

@@ -11,6 +11,7 @@ import { USER_ROLE } from "@/app/utils/constants";
 import { useRouter } from "next/navigation";
 import Loader from "../Loader";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface IBoxForm {
     horas: number;
@@ -30,6 +31,7 @@ export default function ModalConfirmacionReserva({
 }) {
     const [confirmandoAsignacion, setConfirmandoAsignacion] = useState(false);
     const { register, getValues, handleSubmit } = useForm<IBoxForm>();
+    const queryClient = useQueryClient();
 
     const router = useRouter();
 
@@ -41,9 +43,10 @@ export default function ModalConfirmacionReserva({
             return;
         }
         const tiempoEstimado = (horas  * 60) + minutos;
-        const asignacionExitosa = () => {
+
+        const asignacionExitosa = (pacienteId: string) => {
             if (rol === USER_ROLE.profesional) {
-                router.push("/modulos/ficha/" + paciente.id);
+                router.push("/modulos/ficha?pacienteId=" + pacienteId);
             } else {
                 setBox(null);
                 iniciarProgreso(box.id);
@@ -61,23 +64,24 @@ export default function ModalConfirmacionReserva({
                 tiempoEstimado,
             }),
         })
-            .then(res => res.json())
-            .then(data => {
-                console.log("RESPONSE /api/profesional/asignacion", data);
-                if (!data.ok) {
-                    toast.error(data.error || "Error al asignar box");
-                } else {
-                    asignacionExitosa();
-                    toast.success("Box asignado exitosamente");
-                }
-            })
-            .catch((err) => {
-                toast.error("Error de red al asignar box");
-                console.log("ERROR /api/profesional/asignacion", err);
-            })
-            .finally(() => {
-                setConfirmandoAsignacion(false);
-            });
+        .then(res => res.json())
+        .then(data => {
+            console.log("RESPONSE /api/profesional/asignacion", data);
+            if (!data.ok) {
+                toast.error(data.error || "Error al asignar box");
+            } else {
+                asignacionExitosa(paciente?.id || "");
+                toast.success("Box asignado exitosamente");
+            }
+        })
+        .catch((err) => {
+            toast.error("Error de red al asignar box");
+            console.log("ERROR /api/profesional/asignacion", err);
+        })
+        .finally(() => {
+            setConfirmandoAsignacion(false);
+            queryClient.invalidateQueries({ queryKey: ["panoramica"] })
+        });
 
         // Asignar paciente al box
 

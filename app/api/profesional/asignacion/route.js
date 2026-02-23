@@ -1,202 +1,162 @@
-import { connectMongoDB } from "@/lib/mongodb";
+import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
-import Box from "@/models/box";
-import User from "@/models/user";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/utils/authOptions";
 import { USER_ROLE } from "@/app/utils/constants";
-import Ficha from "@/models/ficha";
-import Arribo from "@/models/arribo";
-import Profesional from "@/models/profesional";
 
-/**
- * Assigns a patient to a specific box and professional for medical attention.
- * 
- * This endpoint handles the assignment process by:
- * - Validating professional authentication and authorization
- * - Updating box occupation status with estimated time
- * - Getting or creating a medical record (Ficha) for the current day
- * - If no daily record exists, copies the most recent one (excluding exams, prescriptions, indications)
- * - Updating patient arrival record with attention details
- * 
- * @async
- * @function POST
- * @param {Request} req - The HTTP request object containing assignment data
- * @param {string} req.body.boxId - The unique identifier of the box to assign
- * @param {string} req.body.pacienteId - The unique identifier of the patient
- * @param {number} req.body.tiempoEstimado - Estimated time for the medical attention (in minutes)
- * 
- * @returns {Promise<NextResponse>} JSON response with assignment result
- * @returns {Object} response.body - Response body
- * @returns {boolean} response.body.ok - Success status indicator
- * @returns {Object} response.body.box - Updated box object with new assignment details
- * @returns {string} response.body.error - Error message if operation fails
- * 
- * @throws {401} Unauthorized - When user is not authenticated
- * @throws {403} Forbidden - When user is not a professional
- * @throws {400} Bad Request - When required fields are missing
- * @throws {404} Not Found - When box or professional is not found
- * 
- * @example
- * // Request body
- * {
- *   "boxId": "64a5b8c9d1e2f3a4b5c6d7e8",
- *   "pacienteId": "64a5b8c9d1e2f3a4b5c6d7e9",
- *   "tiempoEstimado": 30
- * }
- * 
- * // Success response
- * {
- *   "ok": true,
- *   "box": {
- *     "_id": "64a5b8c9d1e2f3a4b5c6d7e8",
- *     "ocupacion": {
- *       "ocupado": true,
- *       "tiempoEstimado": 30,
- *       "fechaCambio": "2023-07-15T10:30:00.000Z"
- *     },
- *     "profesionalId": "64a5b8c9d1e2f3a4b5c6d7ea",
- *     "pacienteId": "64a5b8c9d1e2f3a4b5c6d7e9",
- *     "inicioAtencion": "2023-07-15T10:30:00.000Z"
- *   }
- * }
- * 
- * @since 1.0.0
- * @author [Author Name]
- * @see {@link Box} Box model for box structure
- * @see {@link Profesional} Profesional model for professional data
- * @see {@link Ficha} Ficha model for medical records
- * @see {@link Arribo} Arribo model for patient arrivals
- */
 export async function POST(req) {
-    await connectMongoDB();
-    const session = await getServerSession(authOptions);
+    try {
+        console.log("[asignacion] Iniciando petición");
 
-    if (!session || !session.user || !session.user.id) {
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const userId = session.user.id;
-    const user = await User.findOne({ _id: userId });
-    if (!user || user.role !== USER_ROLE.profesional) {
-        return NextResponse.json({ error: "Solo profesionales pueden asignar box" }, { status: 403 });
-    }
-
-    const { boxId, pacienteId, tiempoEstimado } = await req.json();
-    if (!boxId || !tiempoEstimado || !pacienteId) {
-        return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
-    }
-
-    const box = await Box.findById(boxId);
-    if (!box) {
-        return NextResponse.json({ error: "Box no encontrado" }, { status: 404 });
-    }
-
-    const profesional = await Profesional.findOne({ userId: userId });
-    if (!profesional) {
-        return NextResponse.json({ error: "Profesional no encontrado" }, { status: 404 });
-    }
-    
-    // Actualiza la ocupación y profesionalId
-    box.inicioAtencion = new Date();
-    box.profesionalId = profesional._id;
-    box.ocupacion = {
-        fechaCambio: new Date(),
-        ocupado: true,
-        tiempoEstimado: tiempoEstimado
-    };
-    box.pacienteId = pacienteId;
-    box.updatedAt = new Date();
-
-    await box.save();
-
-    // Buscar ficha del día actual para este paciente (debería existir desde recepción)
-    const inicioDelDia = new Date();
-    inicioDelDia.setHours(0, 0, 0, 0);
-    const finDelDia = new Date();
-    finDelDia.setHours(23, 59, 59, 999);
-    
-    let fichaDelDia = await Ficha.findOne({
-        pacienteId: pacienteId,
-        createdAt: {
-            $gte: inicioDelDia,
-            $lte: finDelDia
+        const { user } = await getAuthenticatedUser();
+        if (!user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-    });
-    
-    if (fichaDelDia) {
-        // CASO NORMAL: Ya existe ficha del día (creada en recepción)
-        // Solo completar con profesional y cambiar estado
-        console.log("[asignacion] Completando ficha existente:", fichaDelDia._id);
-        
-        fichaDelDia.profesionalId = profesional._id;
-        fichaDelDia.estadoConsulta = "EN_CURSO";
-        fichaDelDia.horaInicio = new Date();
-        fichaDelDia.updatedAt = new Date();
-        
-        // Copiar datos de la ficha más reciente si la actual está vacía
-        if (!fichaDelDia.anamnesis) {
-            const fichaReciente = await Ficha.findOne({
-                pacienteId: pacienteId,
-                _id: { $ne: fichaDelDia._id } // Excluir la ficha actual
-            }).sort({ createdAt: -1 });
-            
-            if (fichaReciente) {
-                console.log("[asignacion] Copiando datos de ficha reciente");
-                fichaDelDia.anamnesis = fichaReciente.anamnesis;
-                fichaDelDia.examenFisico = fichaReciente.examenFisico;
-                fichaDelDia.diagnostico = fichaReciente.diagnostico;
-                fichaDelDia.planTratamiento = fichaReciente.planTratamiento;
-                fichaDelDia.observaciones = fichaReciente.observaciones;
-                // No copiar: solicitudExamenes, indicaciones, recetas (son específicos de cada consulta)
+
+        const { data: usuario, error: userError } = await supabase
+            .from("usuarios")
+            .select("id, rol, email")
+            .eq("id", user.id)
+            .single();
+
+        if (userError || !usuario || usuario.rol !== USER_ROLE.profesional) {
+            return NextResponse.json({ error: "Solo profesionales pueden asignar box" }, { status: 403 });
+        }
+
+        const { boxId, pacienteId, tiempoEstimado } = await req.json();
+        console.log("[asignacion] Datos recibidos - boxId:", boxId, "pacienteId:", pacienteId, "tiempoEstimado:", tiempoEstimado);
+        if (!boxId || !tiempoEstimado || !pacienteId) {
+            return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
+        }
+
+        const { data: box, error: boxError } = await supabase
+            .from("boxes")
+            .select("id, numero, inicio_atencion, termino_atencion")
+            .eq("id", boxId)
+            .single();
+
+        if (boxError || !box) {
+            return NextResponse.json({ error: "Box no encontrado: " + boxError }, { status: 404 });
+        }
+
+        const { data: profesional, error: profesionalError } = await supabase
+            .from("profesionales")
+            .select("id")
+            .eq("usuario_id", usuario.id)
+            .single();
+
+        if (profesionalError || !profesional) {
+            return NextResponse.json({ error: "Profesional no encontrado" }, { status: 404 });
+        }
+
+        const ahora = new Date().toISOString();
+
+        const { data: boxActualizado, error: boxUpdateError } = await supabase
+            .from("boxes")
+            .update({
+                inicio_atencion: ahora,
+                profesional_id: profesional.id,
+                paciente_id: pacienteId,
+                updated_at: ahora,
+            })
+            .eq("id", box.id)
+            .select("id, numero, ocupado, paciente_id, profesional_id, inicio_atencion, termino_atencion")
+            .single();
+
+        if (boxUpdateError || !boxActualizado) {
+            console.error("[asignacion] Error actualizando box:", boxUpdateError);
+            return NextResponse.json({ error: boxUpdateError?.message || "Error actualizando box" }, { status: 500 });
+        }
+
+        const inicioDelDia = new Date();
+        inicioDelDia.setHours(0, 0, 0, 0);
+        const finDelDia = new Date();
+        finDelDia.setHours(23, 59, 59, 999);
+
+        const { data: fichaDelDia } = await supabase
+            .from("fichas")
+            .select("id")
+            .eq("paciente_id", pacienteId)
+            .gte("created_at", inicioDelDia.toISOString())
+            .lte("created_at", finDelDia.toISOString())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (fichaDelDia) {
+            const { error: fichaUpdateError } = await supabase
+                .from("fichas")
+                .update({
+                    profesional_id: profesional.id
+                })
+                .eq("id", fichaDelDia.id);
+
+            if (fichaUpdateError) {
+                console.error("[asignacion] Error actualizando ficha del día:", fichaUpdateError);
+                return NextResponse.json({ error: fichaUpdateError.message }, { status: 500 });
+            }
+        } else {
+            const { data: fichaReciente } = await supabase
+                .from("fichas")
+                .select("tratamiento, examenes")
+                .eq("paciente_id", pacienteId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            const { error: fichaCreateError } = await supabase
+                .from("fichas")
+                .insert({
+                    paciente_id: pacienteId,
+                    profesional_id: profesional.id,
+                    fecha: ahora,
+                    tratamiento: fichaReciente?.tratamiento || null,
+                    examenes: fichaReciente?.examenes || null
+                });
+
+            if (fichaCreateError) {
+                console.error("[asignacion] Error creando ficha:", fichaCreateError);
+                return NextResponse.json({ error: fichaCreateError.message }, { status: 500 });
             }
         }
-        
-        await fichaDelDia.save();
-        
-    } else {
-        // CASO EXCEPCIONAL: No hay ficha del día (recepción no la creó)
-        console.warn("[asignacion] No se encontró ficha del día, creando nueva");
-        
-        // Buscar la ficha más reciente para copiar datos básicos
-        const fichaReciente = await Ficha.findOne({
-            pacienteId: pacienteId
-        }).sort({ createdAt: -1 });
-        
-        // Crear nueva ficha con datos de la más reciente (si existe)
-        fichaDelDia = await Ficha.create({
-            pacienteId: pacienteId,
-            profesionalId: profesional._id,
-            estadoConsulta: "EN_CURSO",
-            horaInicio: new Date(),
-            // Copiar solo datos básicos de ficha anterior
-            anamnesis: fichaReciente?.anamnesis || "",
-            examenFisico: fichaReciente?.examenFisico || "",
-            diagnostico: fichaReciente?.diagnostico || "",
-            planTratamiento: fichaReciente?.planTratamiento || "",
-            observaciones: fichaReciente?.observaciones || "",
-            // Campos nuevos vacíos
-            solicitudExamenes: [],
-            indicaciones: "",
-            recetas: []
+
+        const { data: arriboActual, error: arriboError } = await supabase
+            .from("arribos")
+            .select("id")
+            .eq("paciente_id", pacienteId)
+            .is("fecha_termino", null)
+            .single();
+
+        if (!arriboActual || arriboError) {
+            return NextResponse.json({ error: "Arribo del paciente no encontrado: " + arriboError?.message }, { status: 404 });
+        }
+
+        const { error: arriboUpdateError } = await supabase
+            .from("arribos")
+            .update({
+                profesional_id: profesional.id,
+                fecha_atencion: ahora
+            })
+            .eq("id", arriboActual.id);
+
+        if (arriboUpdateError) {
+            console.error("[asignacion] Error actualizando arribo:", arriboUpdateError);
+            return NextResponse.json({ error: arriboUpdateError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({
+            ok: true,
+            box: {
+                id: boxActualizado.id,
+                numero: boxActualizado.numero,
+                pacienteId: boxActualizado.paciente_id,
+                profesionalId: boxActualizado.profesional_id,
+                inicioAtencion: boxActualizado.inicio_atencion,
+                terminoAtencion: boxActualizado.termino_atencion,
+                tiempoEstimado,
+            },
         });
-        
-        console.log("[asignacion] Nueva ficha creada:", fichaDelDia._id);
+    } catch (error) {
+        console.error("[asignacion] Error:", error);
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
-
-    const arriboActual = await Arribo.findOne({
-        pacienteId: pacienteId,
-        fechaAtencion: null
-    }).sort({ fechaLlegada: -1 });
-
-    if (arriboActual) {
-        arriboActual.profesionalId = profesional._id;
-        arriboActual.fechaAtencion = new Date();
-        arriboActual.updatedAt = new Date();
-        await arriboActual.save();
-    } else {
-        return NextResponse.json({ error: "Arribo del paciente no encontrado" }, { status: 404 });
-    }
-
-    return NextResponse.json({ ok: true, box });
 }

@@ -33,11 +33,16 @@ export async function GET(req) {
         .from("pacientes")
         .select("*")
         .eq("numero_identidad", rut)
-        .single();
+        .maybeSingle();
 
-    if (pacienteError || !paciente) {
-        console.log("Paciente no encontrado para rut:", rut);
-        return NextResponse.json({ ok: false });
+    if (pacienteError) {
+        console.error("Error al buscar paciente por rut:", pacienteError);
+        return NextResponse.json({ error: "Error al buscar paciente" }, { status: 500 });
+    }
+
+    if ( !paciente) {
+        console.log("Paciente no encontrado para rut:", rut);        
+        return NextResponse.json({ ok: true, paciente: { nuevo: true }}, { status: 200 });
     }
 
     return NextResponse.json({ ok: true, paciente });

@@ -6,23 +6,22 @@ import Medicamentos from "./Medicamentos";
 import { IFichaForm } from "./types";
 import { UseFormRegister, UseFormSetValue, Control, useWatch } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import { Selector } from "../uix/Selector";
+import { Selector } from "../prefabs/Selector";
 import { useEffect } from "react";
+import { useAutoSaveContext } from '../../context/AutoSaveContext';
 
 export default function InformacionPersonal({
     register,
     setValue,
     control,
     esMedico,
-    genero,
-    onChange
+    genero
 }: {    
     register: UseFormRegister<IFichaForm>;
     setValue: UseFormSetValue<IFichaForm>;
     control: Control<IFichaForm>;
     esMedico: boolean;
     genero: string;
-    onChange: (field: string, value: any) => void;
 }) {
     const { data: sistemasSalud, isLoading } = useQuery({
         queryKey: ["sistemasSalud"],
@@ -40,6 +39,13 @@ export default function InformacionPersonal({
         control,
         name: "paciente.sistemaSaludId"
     });
+
+    const { saveField } = useAutoSaveContext();
+
+    // ✅ AGREGAR función helper para auto-guardado
+    const handleAutoSave = (fieldName: string, value: string | number) => {
+        saveField(fieldName, value);
+    };
 
     // Cuando las opciones se carguen, forzar la actualización del valor si existe
     useEffect(() => {
@@ -64,6 +70,7 @@ export default function InformacionPersonal({
                 <input
                     className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                     {...register("paciente.nombres")}
+                    onBlur={(e) => handleAutoSave("paciente.nombres", e.target.value)}
                 />
             </div>
             <div>
@@ -73,6 +80,7 @@ export default function InformacionPersonal({
                 <input
                     className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                     {...register("paciente.apellidos")}
+                    onBlur={(e) => handleAutoSave("paciente.apellidos", e.target.value)}
                 />
             </div>
         </div>
@@ -84,16 +92,21 @@ export default function InformacionPersonal({
                 <input
                     className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                     {...register("paciente.numeroIdentidad")}
+                    onBlur={(e) => handleAutoSave("paciente.numero_identidad", e.target.value)}
                 />
             </div>
 
-            <div className="w-1/3">
+            <div className="w-1/2">
                 <label className="block text-xs font-semibold text-[#68563c] mb-1">
                     Genero
                 </label>
                 <select
                     className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                     {...register("paciente.genero")}
+                    onChange={(e) => {                        
+                        setValue("paciente.genero", e.target.value);                        
+                        handleAutoSave("paciente.genero", e.target.value);
+                    }}
                 >
                     <option value="">Seleccione</option>
                     <option value="M">Masculino</option>
@@ -110,6 +123,7 @@ export default function InformacionPersonal({
             <input
                 className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                 {...register("paciente.direccion")}
+                onBlur={(e) => handleAutoSave("paciente.direccion", e.target.value)}
             />
         </div>
 
@@ -121,6 +135,7 @@ export default function InformacionPersonal({
                 <input
                     className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                     {...register("paciente.telefono")}
+                    onBlur={(e) => handleAutoSave("paciente.telefono", e.target.value)}
                 />
             </div>
             <Selector label="Sistema de salud" 
@@ -129,6 +144,8 @@ export default function InformacionPersonal({
                 getLabel={(s: { id: number, nombre: string }) => s.nombre} 
                 getValue={ss => ss.id}
                 register={register("paciente.sistemaSaludId", { valueAsNumber: true })}
+                autoSaveField="paciente.sistema_salud_id"
+                autoSaveAsNumber={true}
                 isLoading={isLoading} />            
         </div>
         <div>
@@ -138,6 +155,7 @@ export default function InformacionPersonal({
             <input
                 className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                 {...register("paciente.email")}
+                onBlur={(e) => handleAutoSave("paciente.email", e.target.value)}
             />
         </div>
         <div>
@@ -150,27 +168,24 @@ export default function InformacionPersonal({
                         : 'border-[#d5c7aa] focus:border-[#ac9164]'
                     }`}
                 {...register("paciente.alergias")}
+                onBlur={(e) => handleAutoSave("paciente.alergias", e.target.value)}
             />
         </div>
 
         {!esMedico && (
             <div className="space-y-6">
-                <Medicamentos onChange={onChange} register={register} setValue={setValue} />
+                <Medicamentos register={register} />
 
-                <Operaciones onChange={onChange} register={register} setValue={setValue} />
+                <Operaciones register={register} />
 
                 {/* Métodos Anticonceptivos - Solo para mujeres */}
                 {genero === 'F' && (<>
                     <Anticonceptivos 
-                        register={register}
-                        setValue={setValue}
-                        onChange={onChange} />
+                        register={register}/>
 
                     <Partos 
                         register={register} 
-                        setValue={setValue}
-                        control={control}
-                        onChange={onChange} />
+                        control={control} />
                     </>)}                
 
                 <Higiene register={register} control={control} setValue={setValue} />

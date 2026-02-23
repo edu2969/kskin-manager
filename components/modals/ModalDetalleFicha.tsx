@@ -20,7 +20,7 @@ export function ModalDetalleFicha({
     onClose: () => void;
 }) {
     const router = useRouter();
-    const { data: ficha, isLoading } = useQuery<IFichaDetalle>({
+    const { data: ficha } = useQuery<IFichaDetalle>({
         queryKey: ['fichaDetalle', fichaId],
         queryFn: async () => {
             if (!fichaId) return null;
@@ -291,7 +291,7 @@ export function ModalDetalleFicha({
                         <div className="flex">
                             <span className="text-sm text-gray-500 mt-2"
                             onClick={() => {
-                                router.push(`/modulos/ficha/${ficha.paciente.id}?fichaId=${ficha.id}`);
+                                router.push(`/modulos/ficha?fichaId=${ficha.id}`);
                             }}>
                                 Editar
                             </span>

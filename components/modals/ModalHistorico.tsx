@@ -2,13 +2,11 @@ import { useState } from "react";
 import HistoricoFichas from "../HistoricoFichas"
 import { IoMdClose } from "react-icons/io";
 import { Dialog, DialogTitle } from "@headlessui/react";
-import RutInput from "../uix/RutInput";
+import RutInput from "../prefabs/RutInput";
 import Loader from "../Loader";
 import { IPaciente } from "../sucursal/types";
 import toast from "react-hot-toast";
 import { LuSearch } from "react-icons/lu";
-import { ModalDetalleFicha } from "./ModalDetalleFicha";
-import { IFichaHistorica } from "../types";
 
 export default function ModalHistorico({
     show, setShow, onClose    
@@ -17,29 +15,23 @@ export default function ModalHistorico({
     setShow: React.Dispatch<React.SetStateAction<string | boolean>>;
     onClose: () => void;
 }) {
-    const [loadingHistorico, setLoadingHistorico] = useState(false);
-    const [historico, setHistorico] = useState<IFichaHistorica[]>([]);
     const [rutBusqueda, setRutBusqueda] = useState("");    
     const [paciente, setPaciente] = useState<IPaciente | null>(null);
-    const [searching, setSearching] = useState(false);
-    const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
+    const [searching, setSearching] = useState(false);    
 
     const fetchHistorico = async (paciente: IPaciente | null) => {
-        setLoadingHistorico(true);
         if (!paciente?.id) return;
         try {
             const resp = await fetch(`/api/paciente/historico?pacienteId=${paciente.id}`);
             if (resp.ok) {
                 const data = await resp.json();
                 console.log("Histórico completo cargado:", data);
-                setHistorico(data.historico);
             } else {
                 toast.error("Error al cargar el histórico de fichas.");
             }
         } catch {
             toast.error("Error de red al cargar el histórico.");
         }
-        setLoadingHistorico(false);
     };
     
     return (<Dialog open={show !== false} onClose={() => onClose()} className="fixed z-50 inset-0 flex items-center justify-center">

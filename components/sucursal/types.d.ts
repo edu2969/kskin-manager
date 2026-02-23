@@ -11,7 +11,7 @@ export interface ISitemaSalud {
 }
 
 export interface IPaciente {
-    id?: string;
+    id: string;
     nombres: string;
     apellidos: string;
     direccion: string;
@@ -27,6 +27,15 @@ export interface IPaciente {
     alergias?: string;
 }
 
+export interface INuevoArribo {
+    id: string | null;
+    numeroIdentidad?: string;
+    nombreCompleto?: string;
+    genero?: string;
+    tratoEspecial?: boolean;
+    nombreSocial?: string;
+}
+
 export interface IProfesional {
     id: string;
     usuarioId: IUsuario;
@@ -36,16 +45,14 @@ export interface IProfesional {
 export interface IBox {
     id: string;
     numero: number;
-    pacienteId: IPaciente;
-    profesionalId: IProfesional;
-    ocupado: boolean;
+    paciente: IPaciente;
+    profesional: IProfesional;
     inicioAtencion?: Date | null;
     terminoAtencion?: Date | null;    
 }
 
 export interface IArribo {
-    id: string;
-    pacienteId: IPaciente;
+    paciente: IPaciente;
     fechaAtencion: Date | null;
     fechaTermino: Date | null;
 }

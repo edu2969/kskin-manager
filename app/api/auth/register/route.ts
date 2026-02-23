@@ -4,8 +4,8 @@
  */
 
 import { NextRequest } from "next/server";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
-import { APIResponse, MigrationLogger } from "@/lib/supabase-helpers";
+import { supabase } from "@/lib/supabase";
+import { APIResponse } from "@/lib/supabase-helpers";
 
 // ===============================================
 // TIPOS DE DATOS
@@ -34,8 +34,6 @@ interface RegisterResponse {
 async function registerWithSupabase(userData: RegisterRequest): Promise<RegisterResponse> {
   const { name, email, password, telefono } = userData;
   
-  MigrationLogger.info('Attempting registration with Supabase Auth', { email });
-
   // 1. Crear usuario en Supabase Auth
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -49,8 +47,6 @@ async function registerWithSupabase(userData: RegisterRequest): Promise<Register
   });
 
   if (error) {
-    MigrationLogger.error('Supabase registration failed', error);
-    
     if (error.message.includes('already registered')) {
       throw new Error('El email ya está registrado');
     }
@@ -61,31 +57,7 @@ async function registerWithSupabase(userData: RegisterRequest): Promise<Register
   if (!data.user) {
     throw new Error('Error creando usuario');
   }
-
-  // 2. Crear registro en tabla usuarios
-  const { data: usuario, error: userError } = await supabase
-    .from('usuarios')
-    .insert({
-      id: data.user.id,
-      email: email,
-      nombre: name,
-      telefono: telefono || null,
-      activo: true
-    })
-    .select()
-    .single();
-
-  if (userError) {
-    MigrationLogger.error('Failed to create user record', userError);
-    
-    // Limpiar usuario de Auth si falla la inserción
-    await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-    
-    throw new Error('Error creando perfil de usuario');
-  }
-
-  MigrationLogger.success('Supabase registration successful', { userId: data.user.id });
-
+  
   return {
     user: {
       id: data.user.id,
@@ -102,8 +74,6 @@ async function registerWithSupabase(userData: RegisterRequest): Promise<Register
 // ===============================================
 
 export async function POST(req: NextRequest) {
-  const startTime = Date.now();
-
   try {
     const body: RegisterRequest = await req.json();
     const { name, email, password, telefono } = body;
@@ -124,18 +94,15 @@ export async function POST(req: NextRequest) {
     // Ejecutar registro directamente con Supabase
     const result = await registerWithSupabase({ name, email, password, telefono });
 
-    MigrationLogger.performance('Registration operation', startTime);
-
     return APIResponse.success({
       user: result.user,
       message: result.message
     });
 
-  } catch (error: any) {
-    MigrationLogger.error('Registration failed', error);
-    
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error en el registro";
     return APIResponse.error(
-      error.message || "Error en el registro",
+      message,
       400
     );
   }
@@ -155,8 +122,6 @@ export async function GET(req: NextRequest) {
       return APIResponse.error("Email es requerido");
     }
 
-    MigrationLogger.info('Checking if user exists', { email });
-
     // Verificar directamente en Supabase
     const { data, error } = await supabase
       .from('usuarios')
@@ -171,8 +136,7 @@ export async function GET(req: NextRequest) {
       email
     });
 
-  } catch (error) {
-    MigrationLogger.error('Error checking user existence', error);
+  } catch {
     return APIResponse.error("Error verificando usuario", 500);
   }
 }

@@ -1,15 +1,11 @@
 import { FaCaretSquareRight } from "react-icons/fa";
 import { IFichaForm } from "./types";
-import { UseFormRegister, UseFormSetValue } from "react-hook-form";
+import { UseFormRegister } from "react-hook-form";
 
 export default function Operaciones({
-    register,
-    setValue,
-    onChange
+    register
 }: {
     register: UseFormRegister<IFichaForm>;
-    setValue: UseFormSetValue<IFichaForm>;
-    onChange: (field: string, value: any) => void;
 }) {
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
         <details className="group">
@@ -21,9 +17,8 @@ export default function Operaciones({
             </summary>
             <div className="mt-4">
                 <textarea
+                    {...register("paciente.operaciones")}
                     className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-24 focus:border-[#ac9164]"
-                    onChange={(e) => onChange("operaciones", String(e.target.value))}
-                    onBlur={(e) => onChange("operaciones", String(e.target.value))}
                     placeholder="Detalle de operaciones quirúrgicas y/o lesiones..."
                 />
             </div>

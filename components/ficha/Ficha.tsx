@@ -4,13 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { CiPower } from "react-icons/ci";
 import { useRouter } from "next/navigation";
 import Loader from "../Loader";
-import HistoricoFichas from "../HistoricoFichas";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import ModalConfirmacionSalir from "./modals/ModalConfirmacionSalir";
 import EncabezadoFicha from "./EncabezadoFicha";
-import Indicaciones from "./Indicaciones";
+import Tratamiento from "./Tratamiento";
 import { useForm } from "react-hook-form";
 import InformacionPersonal from "./InformacionPersonal";
 import Anamnesis from "./Anamnesis";
@@ -21,6 +20,8 @@ import Licencias from "./Licencias";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 import type { IFichaForm } from "./types";
+import { AutoSaveProvider } from "@/providers/AutoSaveProvider";
+import { AutoSaveIndicator } from "../prefabs/AutoSaveIndicator";
 
 const TABS_MEDICO = [
     { key: "personal", label: "Información personal", color: "pink" },
@@ -40,13 +41,12 @@ export default function Ficha({ pacienteId, fichaId }: {
     pacienteId: string | null;
     fichaId: string | null;
 }) {
-    const [tab, setTab] = useState("personal");
-    const [showHistorico, setShowHistorico] = useState(false);    
-    const [finishing, setFinishing] = useState(false);
+    const [tab, setTab] = useState("personal");    
     const { register, control, setValue, reset } = useForm<IFichaForm>({
         defaultValues: {
             anamnesis: "",
-            indicaciones: "",
+            receta: "",
+            tratamiento: "",
             examenes: "",
             paciente: {
                 nombres: "",
@@ -60,6 +60,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                 fechaNacimiento: "",
                 alergias: "",
                 medicamentos: "",
+                operaciones: "",
                 otroAnticonceptivo: "",
                 otroMedicamento: "",
                 otroAntecedente: ""
@@ -71,7 +72,7 @@ export default function Ficha({ pacienteId, fichaId }: {
             higiene: {
                 cantidadCigarrillosSemanales: 0,
                 aguaConsumidaDiariaLitros: 0,
-                horasEjerciciosSemanales: 0,
+                horasEjercicioSemanales: 0,
                 nivelEstres: "",
                 calidadDormir: "",
                 habitoAlimenticio: ""
@@ -101,8 +102,9 @@ export default function Ficha({ pacienteId, fichaId }: {
     useEffect(() => {
         if (ficha) {
             const formData: IFichaForm = {
-                anamnesis: ficha.tratamiento || "",
-                indicaciones: ficha.indicaciones || "",
+                anamnesis: ficha.anamnesis || "",
+                receta: ficha.receta || "",
+                tratamiento: ficha.tratamiento || "",
                 examenes: ficha.examenes || "",
                 paciente: {
                     nombres: ficha.paciente?.nombres || "",
@@ -120,30 +122,40 @@ export default function Ficha({ pacienteId, fichaId }: {
                         ? ficha.paciente.alergias.join(", ") 
                         : ficha.paciente?.alergias || "",
                     medicamentos: "",
+                    operaciones: ficha.paciente?.operaciones || "",
                     otroAnticonceptivo: "",
                     otroMedicamento: "",
                     otroAntecedente: ficha.paciente?.antecedentesAdicionales || ""
                 },
                 metodosAnticonceptivos: ficha.paciente?.metodosAnticonceptivos || [],
-                medicamentos: ficha.paciente?.medicamentos?.map((m: any) => ({
+                medicamentos: ficha.paciente?.medicamentos?.map((m: {
+                    nombre: string;
+                    unidades: string;
+                    frecuencia: string;
+                }) => ({
                     nombre: m.nombre,
                     unidades: m.unidades,
                     frecuencia: m.frecuencia
                 })) || [],
                 antecedentes: ficha.paciente?.antecedentes || [],
-                partos: ficha.paciente?.partos?.map((p: any, index: number) => ({
+                partos: ficha.paciente?.partos?.map((p: {
+                    number: number;
+                    fecha: string;
+                    genero: string;
+                    tipo: string;
+                }, index: number) => ({
                     numero: index + 1,
                     fecha: p.fecha ? new Date(p.fecha).toISOString().split('T')[0] : "",
                     genero: p.genero || "",
                     tipo: p.tipo || ""
                 })) || [],
                 higiene: {
-                    cantidadCigarrillosSemanales: ficha.higiene?.cantidad_cigarrillos_semanales || 0,
-                    aguaConsumidaDiariaLitros: ficha.higiene?.agua_consumida_diaria_litros || 0,
-                    horasEjerciciosSemanales: ficha.higiene?.horas_ejercicio_semanales || 0,
-                    nivelEstres: ficha.higiene?.nivel_estres || "",
-                    calidadDormir: ficha.higiene?.calidad_dormir || "",
-                    habitoAlimenticio: ficha.higiene?.habito_alimenticio || ""
+                    cantidadCigarrillosSemanales: ficha.higiene?.cantidadCigarrillosSemanales || 0,
+                    aguaConsumidaDiariaLitros: ficha.higiene?.aguaConsumidaDiariaLitros || 0,
+                    horasEjercicioSemanales: ficha.higiene?.horasEjercicioSemanales || 0,
+                    nivelEstres: ficha.higiene?.nivelEstres || "",
+                    calidadDormir: ficha.higiene?.calidadDormir || "",
+                    habitoAlimenticio: ficha.higiene?.habitoAlimenticio || ""
                 }
             };
             
@@ -152,42 +164,20 @@ export default function Ficha({ pacienteId, fichaId }: {
         }
     }, [ficha, reset]);
 
-    const mutationGuardarAtributo = useMutation({
-        mutationFn: async ({ atributo, valor }: { atributo: string; valor: string }) => {
-            const resp = await fetch("/api/profesional/actualizarFicha", {
-                method: "POST",
-                body: JSON.stringify({
-                    atributo,
-                    valor,
-                    fichaId: ficha?.id
-                })
-            });
-            const data = await resp.json();
-            if (!data.ok) {
-                throw new Error(data.error || "Error guardando atributo");
-            }
-            return data;
-        }
-    });
-        
-    const onChange = (atributo: string, valor: string | number | boolean) => {
-        mutationGuardarAtributo.mutate({ atributo, valor: String(valor) });
-    }
-
-    const esMedico = () => {
+    const esMedico = useCallback(() => {
         const profesional = ficha?.profesional;
         if (!profesional || !profesional.especialidades || !profesional.especialidades.length) {
             return false;
-        }
-        return profesional.especialidades.some((esp: string) =>
-            esp === 'medicina'
-        );
-    }
+        }        
+        return profesional.especialidades.some((esp: { nombre: string }) => {            
+            return esp.nombre === 'Medicina';
+        });
+    }, [ficha?.profesional]);
 
     // Función para determinar qué tabs mostrar según especialidad
     const getTabsSegunEspecialidad = useCallback(() => {
         return esMedico() ? TABS_MEDICO : TABS_OTROS;
-    }, [ficha?.profesional]);    
+    }, [esMedico]);    
 
     // Cambiar a primer tab disponible si el actual no está permitido
     useEffect(() => {
@@ -209,22 +199,30 @@ export default function Ficha({ pacienteId, fichaId }: {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({
+                    pacienteId
+                })
             });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Error al terminar la atención');
+            }
+            return data;
         }
     });
 
     const handleTerminarAtencion = async () => {
-        mutationTerminarAtencion.mutate();
+        if(pacienteId) {
+            mutationTerminarAtencion.mutate();
+            return;
+        }
+        router.back();
     }
 
-    return (
+    return (<AutoSaveProvider fichaId={ficha?.id} pacienteId={pacienteId || undefined}>
         <div className="relative p-1 md:p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-screen">
-            {mutationGuardarAtributo.isPending && (
-                <div className="absolute top-2 right-4 bg-[#66754c] text-white px-3 py-1 rounded shadow animate-pulse z-20">
-                    Guardando...
-                </div>
-            )}
+            <AutoSaveIndicator />
 
             {/* Loader Ficha Inicial */}
             {loadingFicha && (
@@ -258,7 +256,6 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 register={register}
                                 setValue={setValue}
                                 control={control}
-                                onChange={onChange}
                                 genero={ficha?.paciente?.genero || ""}
                                 esMedico={esMedico()} />}
 
@@ -270,11 +267,11 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 register={register}
                             />}
 
-                        {tab === "indicaciones" && <Indicaciones register={register} />}
+                        {tab === "indicaciones" && <Tratamiento register={register} />}
 
                         {tab === "receta" && <Receta register={register} />}
 
-                        {tab === "licencias" && <Licencias register={register} />}
+                        {tab === "licencias" && <Licencias />}
                     </div>
                 </div>
 
@@ -313,12 +310,6 @@ export default function Ficha({ pacienteId, fichaId }: {
             </div>
 
             </>}
-            
-            <HistoricoFichas
-                paciente={ficha?.paciente || null}
-                isOpen={showHistorico}
-                onClose={() => setShowHistorico(false)}
-            />
 
             <div className="fixed bottom-2 right-2 md:bottom-6 md:right-6 z-50">
                 {/* Tooltip */}
@@ -340,8 +331,6 @@ export default function Ficha({ pacienteId, fichaId }: {
                 </button>
             </div>
 
-
-
             <ModalConfirmacionSalir
                 isOpen={showModalSalir}
                 onClose={() => setShowModalSalir(false)}
@@ -349,11 +338,11 @@ export default function Ficha({ pacienteId, fichaId }: {
             />
 
             {/* Overlay de finalización */}
-            {finishing && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            {mutationTerminarAtencion.isPending && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg p-8 shadow-xl border border-[#d5c7aa]">
                     <Loader texto="Finalizando la atención..." />
                 </div>
             </div>}
         </div>
-    );
+    </AutoSaveProvider>);
 }

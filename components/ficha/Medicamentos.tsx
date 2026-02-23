@@ -1,16 +1,20 @@
-import { UseFormRegister, UseFormSetValue } from "react-hook-form";
+import { UseFormRegister } from "react-hook-form";
 import { FaCaretSquareRight } from "react-icons/fa";
 import { IFichaForm } from "./types";
+import { useAutoSaveContext } from "@/context/AutoSaveContext";
 
 export default function Medicamentos({
-    register,
-    setValue,
-    onChange
+    register
 }: {
     register: UseFormRegister<IFichaForm>;
-    setValue: UseFormSetValue<IFichaForm>;
-    onChange: (field: string, value: any) => void;
 }) {
+    const { saveField } = useAutoSaveContext();
+    
+    // ✅ AGREGAR función helper para auto-guardado
+    const handleAutoSave = (fieldName: string, value: string) => {
+        saveField(fieldName, value);
+    };
+
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
         <details className="group">
             <summary className="cursor-pointer text-lg font-bold text-[#6a3858] flex items-center gap-2">
@@ -25,8 +29,7 @@ export default function Medicamentos({
                         <input
                             {...register("paciente.medicamentos")}
                             className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164]"
-                            onChange={(e) => onChange("paciente.medicamentos", e.target.value)}
-                            onBlur={(e) => onChange("paciente.medicamentos", e.target.value)}
+                            onBlur={(e) => handleAutoSave("paciente.medicamentos", e.target.value)}
                             placeholder="Nombre del medicamento"
                         />
                     </div>

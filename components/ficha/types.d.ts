@@ -8,7 +8,7 @@ export interface IParto {
 export interface IHigieneForm {
     cantidadCigarrillosSemanales: number;
     aguaConsumidaDiariaLitros: number;
-    horasEjerciciosSemanales: number;
+    horasEjercicioSemanales: number;
     nivelEstres: "bajo" | "medio" | "alto" | "";
     calidadDormir: "buena" | "regular" | "mala" | "";
     habitoAlimenticio: string;
@@ -16,7 +16,8 @@ export interface IHigieneForm {
 
 export interface IFichaForm {
     anamnesis: string;
-    indicaciones: string;
+    receta: string;
+    tratamiento: string;
     examenes: string;
     paciente: {
         nombres: string;
@@ -30,6 +31,7 @@ export interface IFichaForm {
         fechaNacimiento: string;
         alergias: string;
         medicamentos: string;
+        operaciones: string,
         otroAnticonceptivo: string;
         otroMedicamento: string;
         otroAntecedente: string;

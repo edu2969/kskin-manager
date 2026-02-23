@@ -1,6 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { UseFormRegister } from "react-hook-form";
+import { IFichaForm } from "./types";
 
-export default function Examenes({ register }: { register: any }) {
+export default function Examenes({ 
+    register
+ }: { 
+    register: UseFormRegister<IFichaForm>;
+ }) {
     const { data: examenes } = useQuery({
         queryKey: ["examenes"],
         queryFn: async () => {
@@ -9,7 +15,8 @@ export default function Examenes({ register }: { register: any }) {
                 throw new Error("Error al cargar exámenes");
             }
             return res.json();
-        }
+        },
+        initialData: ""
     });
 
     const agregarExamenMutation = useMutation({
@@ -43,18 +50,18 @@ export default function Examenes({ register }: { register: any }) {
                         {...register("examenes")}
                         placeholder="Código o nombre de examen"
                     />
-                    {examenes.length > 0 && (
+                    {examenes?.length > 0 && (
                         <div className="absolute top-full left-0 right-0 bg-white border border-[#d5c7aa] rounded shadow z-10 mt-1">
-                            {examenes.map((ex: { codigo: string; nombre: string }) => (
+                            {examenes.split(",").map((ex: { codigo: string; nombre: string }) => (
                                 <div
                                     key={ex.codigo}
                                     className="px-3 py-2 hover:bg-[#fad379]/20 cursor-pointer"
                                     onClick={() => handleAgregarExamen(ex)}
                                 >
                                     <span className="font-mono text-xs text-[#6a3858]">
-                                        {ex.codigo}
-                                    </span>{" "}
-                                    {ex.nombre}
+                                        <b>{ex.codigo.split("-")[0]}</b>
+                                        {ex.codigo.split("-").length > 1 ? `-${ex.codigo.split("-")[1]}` : ""}
+                                    </span>                                    
                                 </div>
                             ))}
                         </div>
@@ -69,7 +76,7 @@ export default function Examenes({ register }: { register: any }) {
                 </button>
             </div>
             <div className="flex flex-wrap gap-2">
-                {examenes.map((ex: { codigo: string; nombre: string }) => (
+                {examenes?.length > 0 && examenes.split(",").map((ex: { codigo: string; nombre: string }) => (
                     <span
                         key={ex.codigo}
                         className="bg-[#fad379]/30 text-[#68563c] px-3 py-1 rounded flex items-center gap-2 border border-[#fad379]"

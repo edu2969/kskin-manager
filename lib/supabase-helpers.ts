@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export class APIResponse {
-  static success(data: any, message?: string) {
+  static success(data: unknown, message?: string) {
     return NextResponse.json({
       ok: true,
       data,
@@ -9,7 +9,7 @@ export class APIResponse {
     });
   }
 
-  static error(error: string, status = 400, details?: any) {
+  static error(error: string, status = 400, details?: unknown) {
     return NextResponse.json({
       ok: false,
       error,

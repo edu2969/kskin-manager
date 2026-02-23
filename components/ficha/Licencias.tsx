@@ -1,4 +1,4 @@
-export default function Licencias({ register }: { register: any }) {
+export default function Licencias() {
     return <div className="space-y-4">
         <h2 className="text-xl font-bold text-[#6a3858] mb-4">Licencias Médicas</h2>
         <div className="flex flex-col gap-4 items-center mt-12">

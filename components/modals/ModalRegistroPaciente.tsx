@@ -1,41 +1,84 @@
-import RutInput from '@/components/uix/RutInput';
+import RutInput from '@/components/prefabs/RutInput';
 import { Dialog, DialogTitle } from '@headlessui/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AiOutlineMan, AiOutlineWoman } from 'react-icons/ai';
 import { FaPersonCircleQuestion } from 'react-icons/fa6';
 import { IoMdClose } from 'react-icons/io';
 import { LuSearch } from "react-icons/lu";
 import Loader from '../Loader';
-import { IPaciente } from '../sucursal/types';
+import { INuevoArribo, IPaciente } from '../sucursal/types';
+import { useForm } from 'react-hook-form';
 
 export default function ModalRegistroPaciente({
     show, registrarArribo, onClose
 } : {
     show: boolean;
-    registrarArribo: (paciente: IPaciente) => Promise<void>;
+    registrarArribo: (paciente: INuevoArribo) => Promise<void>;
     onClose: () => void;
 }) {
     const [searching, setSearching] = useState(false);
     const [rutBusqueda, setRutBusqueda] = useState("");
-    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);    
+    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);
+    const { register, setValue, handleSubmit, watch } = useForm<INuevoArribo>({
+        defaultValues: {
+            numeroIdentidad: "",
+            nombreCompleto: '',
+            genero: '',
+        }
+    });
 
     const handleBuscarPaciente = async () => {
+        console.log("Iniciando búsqueda de paciente con RUT:", rutBusqueda);
         if (!rutBusqueda.trim()) return;
         setSearching(true);
         const response = await fetch(`/api/recepcion/pacientePorRut?rut=${encodeURIComponent(rutBusqueda)}`);
         const data = await response.json();
+        console.log("Data", data);
         if (data.ok && data.paciente) {
-            console.log("Paciente encontrado:", data.paciente);
+            console.log("Paciente encontrado:", data.paciente);            
             setPacienteEncontrado(data.paciente);
+            setValue("numeroIdentidad", data.paciente.numeroIdentidad || "");
         } else {
+            setValue("numeroIdentidad", "");
             setPacienteEncontrado(null);
         }
         setSearching(false);
+    }    
+
+    const onSubmit = async (formData: INuevoArribo) => {
+        if (!pacienteEncontrado) return;
+        registrarArribo({
+            id: pacienteEncontrado.id || null,
+            numeroIdentidad: rutBusqueda,
+            nombreCompleto: formData.nombreCompleto || "",
+            genero: formData.genero || pacienteEncontrado.genero,
+            tratoEspecial: pacienteEncontrado.tratoEspecial || false,
+            nombreSocial: formData.nombreSocial || pacienteEncontrado.nombreSocial || ""
+        });
+        onClose();
     }
+
+    const nombreCompleto = watch("nombreCompleto");
+    const genero = watch("genero");
+
+    // Validación inteligente del botón
+    const isFormValid = useMemo(() => {
+        // Si no hay paciente encontrado, el botón debe estar deshabilitado
+        if (!pacienteEncontrado) return false;
+        
+        // Si es un paciente existente (no nuevo), siempre es válido
+        if (!pacienteEncontrado.nuevo) return true;
+        
+        // Si es un paciente nuevo, validar campos requeridos
+        return (
+            (nombreCompleto || "").trim().length > 0 &&
+            (genero || "").trim().length > 0
+        );
+    }, [pacienteEncontrado, nombreCompleto, genero]);
         
     return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
         <div className="fixed inset-0 bg-black/30" />
-        <div className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-[96%] max-w-md">
+        <form onSubmit={handleSubmit(onSubmit)} className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-[96%] max-w-md">
             <button
                 className="absolute top-2 right-2 text-[#8e9b6d] hover:text-[#68563c] transition-colors"
                 onClick={() => {
@@ -85,7 +128,7 @@ export default function ModalRegistroPaciente({
                                     ? "Nuevo paciente"
                                     : (pacienteEncontrado.nombres + " " + pacienteEncontrado.apellidos)}
                             </div>
-                            <div className="text-xs text-[#8e9b6d]">{pacienteEncontrado.rut}</div>
+                            <div className="text-xs text-[#8e9b6d]">{pacienteEncontrado.numeroIdentidad}</div>
                         </div>
                     </div>
                     {pacienteEncontrado.nuevo && (
@@ -95,13 +138,7 @@ export default function ModalRegistroPaciente({
                                 <input
                                     type="text"
                                     className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
-                                    value={pacienteEncontrado.nombres}
-                                    onChange={e =>
-                                        setPacienteEncontrado(prev => prev ? ({
-                                            ...prev,
-                                            nombres: e.target.value,
-                                        }) : null)
-                                    }
+                                    {...register("nombreCompleto", { required: true })}
                                     placeholder="Nombre completo"
                                 />
                             </div>
@@ -109,13 +146,7 @@ export default function ModalRegistroPaciente({
                                 <label className="block text-sm font-semibold text-[#68563c] mb-1">Género</label>
                                 <select
                                     className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
-                                    value={pacienteEncontrado.genero}
-                                    onChange={e =>
-                                        setPacienteEncontrado(prev => prev ? ({
-                                            ...prev,
-                                            genero: e.target.value,
-                                        }) : null)
-                                    }
+                                    {...register("genero", { required: true })}
                                 >
                                     <option value="">Selecciona...</option>
                                     <option value="F">Femenino</option>
@@ -145,13 +176,7 @@ export default function ModalRegistroPaciente({
                                     <input
                                         type="text"
                                         className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
-                                        value={pacienteEncontrado.nombreSocial || ""}
-                                        onChange={e =>
-                                            setPacienteEncontrado(prev => prev ? ({
-                                                ...prev,
-                                                nombreSocial: e.target.value,
-                                            }) : null)
-                                        }
+                                        {...register("nombreSocial")}
                                         placeholder="Nombre social"
                                     />
                                 </div>
@@ -163,13 +188,8 @@ export default function ModalRegistroPaciente({
             <div className="flex gap-2 mt-6 h-12">
                 <button
                     className="flex-1 rounded-full bg-[#66754c] hover:bg-[#8e9b6d] text-white font-semibold py-2 transition disabled:opacity-50 shadow"
-                    disabled={!pacienteEncontrado || !pacienteEncontrado.nombres || !pacienteEncontrado.genero}
-                    onClick={() => {
-                        if(pacienteEncontrado) {
-                            registrarArribo(pacienteEncontrado);
-                        }
-                        onClose();
-                    }}
+                    disabled={!isFormValid}
+                    type="submit"
                 >Aceptar
                 </button>
                 <button
@@ -183,6 +203,6 @@ export default function ModalRegistroPaciente({
                     Cancelar
                 </button>
             </div>
-        </div>
+        </form>
     </Dialog>);
 }

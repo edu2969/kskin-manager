@@ -11,6 +11,8 @@ export async function GET() {
         return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log("[GET] /api/panoramica/lastUpdate - Usuario autenticado:", user);
+
     // Verificar rol del usuario
     const { data: usuario, error: userError } = await supabase
         .from("usuarios")
@@ -19,7 +21,7 @@ export async function GET() {
         .single();
 
     if (userError || !usuario || (usuario.rol !== USER_ROLE.recepcionista && usuario.rol !== USER_ROLE.profesional)) {
-        console.log("[GET] /api/panoramica/lastUpdate - Rol de usuario no permitido");
+        console.log("[GET] /api/panoramica/lastUpdate - Rol de usuario no permitido", userError, usuario);
         return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
 

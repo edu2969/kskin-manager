@@ -10,10 +10,13 @@ export async function GET(req) {
         console.log("[GET] /api/paciente/ficha - Iniciando petición");
 
         const { searchParams } = req.nextUrl;
-        const pacienteId = searchParams.get("pacienteId");
-        const fichaId = searchParams.get("fichaId");
+        const pacienteId = normalizeQueryParam(searchParams.get("pacienteId"));
+        const fichaId = normalizeQueryParam(searchParams.get("fichaId"));
+
+        const filterField = fichaId ? 'id' : 'paciente_id';
+        const filterValue = fichaId || pacienteId;
         
-        if (!pacienteId && !fichaId) {
+        if (!filterValue) {
             return NextResponse.json({ error: 'Paciente ID or Ficha ID is required' }, { status: 400 });
         }
 
@@ -43,22 +46,21 @@ export async function GET(req) {
                     nombres,
                     apellidos,
                     numero_identidad,
+                    direccion,
+                    email,
                     fecha_nacimiento,
+                    telefono,
                     genero,
                     sistemas_salud ( id, nombre ),
                     alergias,
-                    antecedentes_adicionales,
-                    antecedentes:paciente_antecedentes (
-                        antecedente_id:antecedentes (
-                            nombre
-                        )
-                    ),
+                    antecedentes:paciente_antecedentes ( antecedente_id ),
                     partos:paciente_partos (
                         fecha,
                         tipo,
                         abortado,
                         genero
-                    )
+                    ),                    
+                    operaciones
                 ),
                 profesional:profesionales (
                     id,                    
@@ -77,7 +79,7 @@ export async function GET(req) {
                     dosis_prescrita,
                     frecuencia
                 ),
-                higiene:ficha_higiene (
+                higiene:higienes (
                     cantidad_cigarrillos_semanales,
                     agua_consumida_diaria_litros,
                     nivel_estres,
@@ -89,12 +91,17 @@ export async function GET(req) {
                 tratamiento,
                 duracion_tratamiento_semanas,
                 examenes,
+                anamnesis,
                 created_at,
                 finished_at
             `)
-            .eq(fichaId ? 'id' : 'paciente_id', fichaId || pacienteId)
+            .eq(filterField, filterValue)
             .order('created_at', { ascending: false })
-            .single();        
+            .limit(1)
+            .maybeSingle();
+            
+        console.log("[GET] /api/paciente/ficha - fichaId:", fichaId, "pacienteId:", pacienteId);
+        console.log("[GET] /api/paciente/ficha - Resultados de la consulta:", filterField, filterValue);
 
         if (error) {
             console.log("ERROR fetching ficha:", error);
@@ -115,9 +122,12 @@ export async function GET(req) {
                 nombres: ficha.paciente.nombres,
                 apellidos: ficha.paciente.apellidos,
                 numeroIdentidad: ficha.paciente.numero_identidad,
+                direccion: ficha.paciente.direccion,
+                email: ficha.paciente.email,
+                telefono: ficha.paciente.telefono,
                 fechaNacimiento: ficha.paciente.fecha_nacimiento,
                 genero: ficha.paciente.genero,
-                sistemaSaludId: ficha.paciente.sistemas_salud.id,
+                sistemaSaludId: ficha.paciente.sistemas_salud?.id || 0,
                 aplicaAlergias: ficha.paciente.aplica_alergias,
                 alergias: ficha.paciente.alergias ? ficha.paciente.alergias.split(',') : [],
                 antecedentes: ficha.paciente.antecedentes?.map((a) => a.detalles),
@@ -126,8 +136,8 @@ export async function GET(req) {
                     unidades: m.dosis_prescrita,
                     frecuencia: m.frecuencia,
                 })),
+                operaciones: ficha.paciente.operaciones,
                 partos: ficha.paciente.partos,
-                higiene: ficha.paciente.higiene,
                 antecedentesAdicionales: ficha.paciente.antecedentes_adicionales || null,
             },
             profesional: {
@@ -138,10 +148,19 @@ export async function GET(req) {
                     nombre: e.especialidad.nombre,
                 })),
             },
+            higiene: {
+                cantidadCigarrillosSemanales: ficha.higiene?.cantidad_cigarrillos_semanales,
+                aguaConsumidaDiariaLitros: ficha.higiene?.agua_consumida_diaria_litros,
+                horasEjercicioSemanales: ficha.higiene?.horas_ejercicio_semanales,
+                nivelEstres: ficha.higiene?.nivel_estres,
+                calidadDormir: ficha.higiene?.calidad_dormir,
+                habitoAlimenticio: ficha.higiene?.habito_alimenticio,
+            },            
             fecha: ficha.fecha,
             tratamiento: ficha.tratamiento,
             duracionTratamientoSemanas: ficha.duracion_tratamiento_semanas,
             examenes: ficha.examenes,
+            anamnesis: ficha.anamnesis,
             createdAt: ficha.created_at,
             finishedAt: ficha.finished_at,
         };
@@ -151,4 +170,22 @@ export async function GET(req) {
         console.error('Error fetching ficha:', err);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
+}
+
+function normalizeQueryParam(value) {
+    if (value == null) {
+        return null;
+    }
+
+    const normalized = String(value).trim();
+    if (!normalized) {
+        return null;
+    }
+
+    const lower = normalized.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') {
+        return null;
+    }
+
+    return normalized;
 }

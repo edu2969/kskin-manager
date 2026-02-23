@@ -5,9 +5,7 @@
 
 'use client';
 
-import { useAuth } from '@/components/context/AuthContext';
-import { useAuthorization } from '@/lib/auth/useAuthorization';
-import { ROLE_MAPPING } from '@/lib/auth/permissions';
+import { useAuth } from '@/context/AuthContext';
 import { useMemo } from 'react';
 
 // ===============================================
@@ -37,16 +35,13 @@ interface SessionReturn {
 
 export function useSession(): SessionReturn {
   const { user, loading } = useAuth();
-  const auth = useAuthorization();
   
   const sessionData = useMemo(() => {
-    if (!user || !auth.cargos || auth.cargos.length === 0) {
+    if (!user || typeof user.rol !== 'number') {
       return null;
     }
 
-    // Obtener el primer rol legacy para compatibilidad
-    const primaryCargo = auth.cargos[0];
-    const legacyRole = primaryCargo?.tipo || 128; // Default invitado
+    const legacyRole = user.rol || 128;
 
     const legacyUser: LegacyUser = {
       id: user.id,
@@ -59,7 +54,7 @@ export function useSession(): SessionReturn {
       user: legacyUser,
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 horas
     };
-  }, [user, auth.cargos]);
+  }, [user]);
 
   const status = loading 
     ? 'loading' 
@@ -90,7 +85,7 @@ export interface ServerSession {
  * Reemplazo para getServerSession en APIs
  * Usar en rutas de API que anteriormente usaban NextAuth
  */
-export async function getSupabaseServerSession(req: Request): Promise<ServerSession | null> {
+export async function getSupabaseServerSession(): Promise<ServerSession | null> {
   // Esta función debería ser llamada desde el middleware de autorización
   // Por ahora, devuelve null para indicar que la sesión debe manejarse diferente
   console.warn('getSupabaseServerSession: Use el nuevo middleware de autorización en su lugar');
@@ -105,8 +100,8 @@ export async function getSupabaseServerSession(req: Request): Promise<ServerSess
  * Verificar si una request tiene una sesión válida
  * Versión simplificada para migración gradual
  */
-export function hasValidSession(session: any): boolean {
-  return session && session.user && session.user.id;
+export function hasValidSession(session: ServerSession | null): boolean {
+  return Boolean(session?.user?.id);
 }
 
 // ===============================================
@@ -117,7 +112,7 @@ export function useSignIn() {
   const { signIn } = useAuth();
   
   return {
-    signIn: async (provider?: string, options?: any) => {
+    signIn: async (provider?: string, options?: { email?: string; password?: string; callbackUrl?: string }) => {
       if (provider === 'credentials' && options?.email && options?.password) {
         return await signIn(options.email, options.password);
       }
@@ -130,7 +125,7 @@ export function useSignOut() {
   const { signOut } = useAuth();
   
   return {
-    signOut: async (options?: any) => {
+    signOut: async (options?: { redirect?: boolean; callbackUrl?: string }) => {
       await signOut();
       if (options?.redirect !== false && typeof window !== 'undefined') {
         window.location.href = options?.callbackUrl || '/';

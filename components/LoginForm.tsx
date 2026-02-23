@@ -1,19 +1,22 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, FieldErrors } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import Image from "next/image";
 import Loader from "./Loader";
-import { IoAlertCircle } from "react-icons/io5";
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 
 export default function LoginForm() {
   const router = useRouter();
-  const onError = (errors: any, e: any) => console.log(errors, e);
+  const onError = (errors: FieldErrors<LoginFormData>, e?: React.BaseSyntheticEvent) => console.log(errors, e);
   const [resolution, setResolution] = useState({ width: 0, height: 0 });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);
-  const [status, setStatus] = useState("");
+  const [redirecting, setRedirecting] = useState(false);  
   
   const supabase = getSupabaseBrowserClient();
 
@@ -32,26 +35,21 @@ export default function LoginForm() {
       errors
     },
     handleSubmit,
-  } = useForm();
-  const [error, setError] = useState("");
+  } = useForm<LoginFormData>();  
 
-  const onSubmit = async (data: any) => {
-    setStatus("");
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoggingIn(true);
     
     try {
       console.log('Intentando login con:', data.email);
       const { error } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-      if(error) {
-        setStatus(error.message);
-      } else {
+      if(!error) {
         console.log('Login exitoso, redirigiendo...');
         setRedirecting(true);
         router.replace("/pages");
       }
     } catch (error) {
       console.error('Error en onSubmit:', error);
-      setStatus((error as Error).message || "Error en el login");
       setIsLoggingIn(false);
     }
   };
@@ -128,14 +126,6 @@ export default function LoginForm() {
                 />
                 {errors.password && <p className="text-red-500 text-sm mt-1 ml-4">Contraseña requerida</p>}
               </div>
-
-              {/* Error general */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-center text-sm flex items-center justify-center gap-2">
-                  <IoAlertCircle />
-                  {error}
-                </div>
-              )}
 
               {/* Botón de entrada */}
               <button

@@ -1,9 +1,4 @@
-/**
- * BIOX - Supabase Client Configuration
- * Configuración centralizada del cliente de Supabase
- */
-
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -13,7 +8,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required');
 }
 
-// Cliente principal (client-side)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
@@ -55,7 +49,7 @@ export const getSupabaseAdmin = () => {
 };
 
 // For backwards compatibility, but only initialize on server-side
-export const supabaseAdmin = typeof window === 'undefined' ? getSupabaseAdmin() : (null as any);
+export const supabaseAdmin: SupabaseClient | null = typeof window === 'undefined' ? getSupabaseAdmin() : null;
 
 // Tipos TypeScript para las tablas principales
 export interface Usuario {
@@ -85,21 +79,9 @@ export const supabaseQueries = {
 
     // Función para refresh de vistas materializadas
     async refreshMaterializedViews() {
+        if(!supabaseAdmin) return { data: null, error: new Error('supabaseAdmin no disponible') };
         const { data, error } = await supabaseAdmin.rpc('refresh_materialized_views');
         return { data, error };
-    },
-
-    // Verificar estado de la conexión
-    async checkConnection() {
-        try {
-            const { data, error } = await supabase
-                .from('usuarios')
-                .select('id')
-                .limit(1);
-            return { connected: !error, error };
-        } catch (error) {
-            return { connected: false, error };
-        }
     }
 };
 

@@ -8,7 +8,7 @@
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useOnVisibilityChange } from '../uix/useOnVisibilityChange';
+import { useOnVisibilityChange } from '@/components/prefabs/useOnVisibilityChange';
 
 // ===============================================
 // TIPOS DE DATOS
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           rol
         `)
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (userError || !userData) {
         console.error('Error al cargar datos del usuario:', userError);
@@ -188,6 +188,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.error('Error al recuperar la sesión:', error);
           return;
         }
+
+        console.log("Sessión recuperada:", session);
 
         if (session?.user) {
           console.log('Sesión encontrada:', session);
