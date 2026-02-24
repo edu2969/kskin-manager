@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// Configuración segura de variables de entorno
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -8,11 +9,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required');
 }
 
+// Cliente público para uso en el cliente y servidor
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        persistSession: true,
+        persistSession: false, // Cambiado para Next.js 15
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false, // Deshabilitado para API routes
         flowType: 'pkce'
     },
     global: {

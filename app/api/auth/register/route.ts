@@ -3,6 +3,10 @@
  * Reemplaza el registro tradicional con MongoDB
  */
 
+// Configuración del runtime para Next.js 15
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { APIResponse } from "@/lib/supabase-helpers";

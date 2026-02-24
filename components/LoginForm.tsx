@@ -70,8 +70,9 @@ export default function LoginForm() {
       {/* Contenido principal */}
       <div className="flex flex-col items-center justify-center min-h-screen px-6 py-6">
         {/* Logo superior */}
-        <div className="mb-8">          
+        <div className="mb-8 flex">          
             <Image width={240} height={120} src="/brand-green-kskin.png" alt="KSKIN-Brand" className="h-32 w-auto filter brightness-0 invert" priority={true} />          
+            <span className="text-white opacity-40 text-xs">v0.9</span>
         </div>
         
         {/* Tarjeta de login */}
