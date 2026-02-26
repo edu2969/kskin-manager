@@ -1,3 +1,5 @@
+'use client';
+
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 export async function signIn(email: string, password: string) {
