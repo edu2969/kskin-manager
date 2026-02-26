@@ -8,12 +8,13 @@ function getEnvironmentVariables() {
     if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error("Supabase environment variables are not set.");
     }
+
     return { supabaseUrl, supabaseAnonKey };
 }
 
-export async function createSupabaseServerClient() {
+export function createSupabaseServerClient() {
     const { supabaseUrl, supabaseAnonKey } = getEnvironmentVariables();
-    const cookieStore = await cookies();
+    const cookieStore = cookies() as any;
 
     return createServerClient(supabaseUrl, supabaseAnonKey, {
         cookies: {
@@ -22,12 +23,10 @@ export async function createSupabaseServerClient() {
             },
             setAll(cookiesToSet) {
                 try {
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        cookieStore.set(name, value, options)
-                    );
-                } catch (error) {
-                    console.error("Error setting cookies:", error); 
-                }
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        cookieStore.set(name, value, options);
+                    });
+                } catch {}
             }
         }
     });
