@@ -1,10 +1,9 @@
-// next.config.mjs para compatibilidad con ESM en Next.js 15
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js', 'mongoose', 'mongodb']
-  },
+
+  serverExternalPackages: ['@supabase/supabase-js'],
+
   webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -17,36 +16,27 @@ const nextConfig = {
         worker_threads: false,
       };
     }
-    
-    // Configuración para evitar problemas de require en módulos ES
+
     config.plugins.push(
       new webpack.DefinePlugin({
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
       })
     );
 
     return config;
   },
+
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
-      }
-    ]
+      },
+    ];
   },
 };
 
