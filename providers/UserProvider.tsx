@@ -3,10 +3,17 @@
 import { createClient, User, Session } from '@supabase/supabase-js';
 import { useEffect, useState, createContext, useContext } from 'react';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// PROTECCIÓN: Solo crear cliente si las variables están disponibles
+let supabase: ReturnType<typeof createClient> | null = null;
+
+if (typeof window !== 'undefined' && 
+    process.env.NEXT_PUBLIC_SUPABASE_URL && 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
 
 interface UserContextType {
   user: User | null;
@@ -20,6 +27,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
+    if (!supabase) {
+      // Si no hay cliente Supabase disponible, no hacer nada
+      return;
+    }
+
     const fetchSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user || null);
