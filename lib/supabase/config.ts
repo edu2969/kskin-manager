@@ -19,9 +19,14 @@ export function getSupabaseConfig(context: 'server' | 'client' | 'middleware' = 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // SOLUCIÓN AGRESIVA: CUALQUIER FALTA DE VARIABLES = MOCK
+  // SOLUCIÓN: Mock SOLO durante build time, no en runtime del navegador
   if (!url || !anonKey) {
-    // Durante build en Docker o cualquier contexto sin variables, usar valores mock
+    // Si estamos en el navegador sin variables, es un error real
+    if (typeof window !== 'undefined') {
+      throw new Error(`Variables de entorno faltantes para Supabase. Verifica NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY`);
+    }
+    
+    // Solo usar mock durante build/server-side sin variables
     configCache = {
       url: 'https://mock.supabase.co',
       anonKey: 'mock-anon-key'
@@ -33,12 +38,7 @@ export function getSupabaseConfig(context: 'server' | 'client' | 'middleware' = 
   try {
     new URL(url);
   } catch {
-    // Si URL inválida, también usar mock
-    configCache = {
-      url: 'https://mock.supabase.co', 
-      anonKey: 'mock-anon-key'
-    };
-    return configCache;
+    throw new Error(`NEXT_PUBLIC_SUPABASE_URL no es una URL válida: ${url}`);
   }
 
   // Cache y retornar configuración válida

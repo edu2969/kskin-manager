@@ -48,14 +48,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   
-  // Cliente de Supabase para browser
-  const supabase = createSupabaseBrowserClient();
+  // Cliente de Supabase para browser - Lazy initialization
+  const [supabase, setSupabase] = useState<ReturnType<typeof createSupabaseBrowserClient> | null>(null);
+  
+  // Inicializar cliente en useEffect para evitar SSR issues
+  useEffect(() => {
+    try {
+      const client = createSupabaseBrowserClient();
+      setSupabase(client);
+    } catch (error) {
+      console.error('Error inicializando Supabase client:', error);
+      setLoading(false); // Si no hay Supabase, no cargar indefinidamente
+    }
+  }, []);
   
   // ===============================================
   // FUNCIONES DE SUPABASE
   // ===============================================
 
   const supabaseSignIn = async (email: string, password: string) => {
+    if (!supabase) {
+      throw new Error('Cliente Supabase no disponible');
+    }
+    
     try {
       // Primero intentar con Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -103,6 +118,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const supabaseSignOut = async () => {
+    if (!supabase) return;
+    
     try {
       await supabase.auth.signOut();
       setUser(null);
@@ -111,6 +128,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const supabaseSignUp = async (email: string, password: string, name: string) => {
+    if (!supabase) {
+      throw new Error('Cliente Supabase no disponible');
+    }
+    
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -134,8 +155,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshSession = async () => {
     // Evitar refrescos innecesarios si ya hay una carga en progreso
-    if (isLoadingUser) {
-      console.log('Carga de usuario en progreso, omitiendo refresh...');
+    if (isLoadingUser || !supabase) {
+      console.log('Carga de usuario en progreso o cliente no disponible, omitiendo refresh...');
       return;
     }
     
@@ -152,8 +173,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loadUserData = async (userId: string) => {
     // Evitar llamadas duplicadas
-    if (isLoadingUser) {
-      console.log('Ya hay una carga de usuario en progreso, omitiendo...');
+    if (isLoadingUser || !supabase) {
+      console.log('Ya hay una carga de usuario en progreso o cliente no disponible, omitiendo...');
       return;
     }
     
@@ -193,6 +214,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    
     let mounted = true;
     
     const initAuth = async () => {
@@ -252,7 +278,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       mounted = false;
       subscription?.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]); // Dependencia: solo ejecutar cuando supabase esté disponible
 
   const authenticated = !!user;
 

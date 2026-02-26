@@ -61,7 +61,12 @@ export function createSupabaseBrowserClient(options: BrowserClientOptions = {}):
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error desconocido';
     
-    // Si no se puede crear el cliente, retornar mock
+    // Si no se puede crear el cliente en el navegador, es un error real
+    if (typeof window !== 'undefined') {
+      throw new Error(`Error de configuración Supabase: ${message}`);
+    }
+
+    // Solo usar mock en server-side
     console.warn(`Error creando cliente Supabase, usando mock: ${message}`);
     return createMockClient();
   }
