@@ -19,6 +19,14 @@ interface ServerClientOptions {
  */
 export async function createSupabaseServerClient(options: ServerClientOptions = {}): Promise<ReturnType<typeof createServerClient>> {
   try {
+    // PROTECCIÓN: Durante build time, devolver cliente mock
+    if (process.env.NODE_ENV === 'production' && typeof window === 'undefined' && process.env.CI) {
+      return {
+        from: () => ({ select: () => ({ data: null, error: null }) }),
+        auth: { getUser: () => ({ data: { user: null }, error: null }) }
+      } as any;
+    }
+
     // Obtener configuración de manera segura
     const config = getSupabaseConfig('server');
     
