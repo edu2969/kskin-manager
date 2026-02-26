@@ -14,6 +14,7 @@ function getEnvironmentVariables() {
 
 export function createSupabaseServerClient() {
     const { supabaseUrl, supabaseAnonKey } = getEnvironmentVariables();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cookieStore = cookies() as any;
 
     return createServerClient(supabaseUrl, supabaseAnonKey, {
