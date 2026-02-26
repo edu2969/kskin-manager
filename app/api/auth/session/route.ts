@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { APIResponse } from "@/lib/supabase-helpers";
+import { ResponseHelper } from "@/lib/supabase-helpers";
 
 interface SessionResponse {
   user: {
@@ -72,14 +72,14 @@ export async function GET() {
     const sessionData = await getSupabaseSession();
 
     if (!sessionData.authenticated) {
-      return APIResponse.success({
+      return ResponseHelper.success({
         user: null,
         authenticated: false,
         message: 'No active session'
       });
     }
 
-    return APIResponse.success({
+    return ResponseHelper.success({
       user: sessionData.user,
       rol: sessionData.user?.rol,
       authenticated: true,
@@ -88,7 +88,7 @@ export async function GET() {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error obteniendo sesión"; 
-    return APIResponse.error(
+    return ResponseHelper.error(
       "Error obteniendo sesión",
       500,
       process.env.NODE_ENV === 'development' ? message : undefined
@@ -107,14 +107,14 @@ export async function POST() {
     const { data, error } = await supabase.auth.refreshSession();
 
     if (error) {
-      return APIResponse.error("Error refrescando sesión", 401);
+      return ResponseHelper.error("Error refrescando sesión", 401);
     }
 
     if (!data.session || !data.user) {
-      return APIResponse.error("No hay sesión para refrescar", 401);
+      return ResponseHelper.error("No hay sesión para refrescar", 401);
     }
 
-    return APIResponse.success({
+    return ResponseHelper.success({
       user: {
         id: data.user.id,
         email: data.user.email!,
@@ -125,6 +125,6 @@ export async function POST() {
     });
 
   } catch {
-    return APIResponse.error("Error interno en refresh", 500);
+    return ResponseHelper.error("Error interno en refresh", 500);
   }
 }

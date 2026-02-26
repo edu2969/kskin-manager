@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { APIResponse } from "@/lib/supabase-helpers";
+import { ResponseHelper } from "@/lib/supabase-helpers";
 import { Session } from "@supabase/supabase-js";
 
 // ===============================================
@@ -106,18 +106,18 @@ export async function POST(req: NextRequest) {
 
     // Validación de entrada
     if (!email || !password) {
-      return APIResponse.error("Email y contraseña son requeridos");
+      return ResponseHelper.error("Email y contraseña son requeridos");
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      return APIResponse.error("Formato de email inválido");
+      return ResponseHelper.error("Formato de email inválido");
     }
 
     // Ejecutar login directamente con Supabase
     const result = await loginWithSupabase(email, password);
 
     // Establecer cookies de sesión si es necesario
-    const response = APIResponse.success({
+    const response = ResponseHelper.success({
       user: result.user,
       message: 'Login exitoso'
     });
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error en el login";
-    return APIResponse.error(
+    return ResponseHelper.error(
       message,
       401
     );
@@ -144,14 +144,14 @@ export async function DELETE() {
     // Logout con Supabase
     const { error } = await supabase.auth.signOut();
     if (error) {
-      return APIResponse.error("Error cerrando sesión", 500);
+      return ResponseHelper.error("Error cerrando sesión", 500);
     }
 
-    return APIResponse.success({
+    return ResponseHelper.success({
       message: 'Logout exitoso'
     });
 
   } catch {
-    return APIResponse.error("Error en logout", 500);
+    return ResponseHelper.error("Error en logout", 500);
   }
 }

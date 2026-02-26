@@ -1,5 +1,4 @@
 'use client'
-import { signOut } from 'next-auth/react';
 import Link from 'next/link'
 import { useEffect, useState } from 'react';
 import { AiFillHome, AiOutlineMenu, AiOutlineClose, AiFillAliwangwang, AiOutlineLogout } from 'react-icons/ai'
@@ -7,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { MdOutlinePropaneTank, MdSell } from 'react-icons/md';
 import { IoSettingsSharp } from 'react-icons/io5';
 import { USER_ROLE } from '@/app/utils/constants';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 
 export default function Nav() {
@@ -15,14 +14,14 @@ export default function Nav() {
     const router = useRouter();
     const [menuActivo, setMenuActivo] = useState(false);  
     const path = usePathname(); 
-    const { data: session, status } = useSession();
+    const { user, loading, signOut } = useAuth();
     
     useEffect(() => {
-        if(status === 'loading') return;
-        if(session && session.user && session.user?.role) {
-            setRole(session.user.role);
+        if (loading) return;
+        if (user && user.rol) {
+            setRole(user.rol);
         }
-    }, [session, setRole, status]);
+    }, [user, setRole, loading]);
 
     return (
         <div className={`w-full absolute top-0 left-0 ${path === '/' ? 'hidden' : 'visible'}`}>
@@ -70,23 +69,22 @@ export default function Nav() {
                     <button className="min-w-2xl flex hover:bg-white hover:text-[#9cb6dd] rounded-md p-2"
                         onClick={async () => { 
                             setMenuActivo(false);
-                            signOut({ redirect: false }).then(() => {
-                                router.push('/modulos/logingOut'); 
-                            });
+                            await signOut();
+                            router.push('/logout'); 
                         }}>
                         <AiOutlineLogout size="4rem" />
                         <p className="text-2xl ml-2 mt-4">Cerrar sesión</p>
                     </button>
                 </div>
-                {session?.user && (
+                {user && (
                     <div className="absolute bottom-6 right-6 flex flex-col items-end space-y-2">
                         <div className="flex flex-row items-center space-x-4">
                             <div className="flex flex-col text-right">
-                                <span className="text-lg text-green-800 font-semibold">{session.user.name}</span>
-                                <span className="text-sm text-gray-300">{session.user.email}</span>
+                                <span className="text-lg text-green-800 font-semibold">{user.nombre}</span>
+                                <span className="text-sm text-gray-300">{user.email}</span>
                             </div>
                             <Image
-                                src={`/profiles/${session.user.email.split('@')[0]}.jpg`}
+                                src={`/profiles/${user.email.split('@')[0]}.jpg`}
                                 alt="Perfil"
                                 className="w-14 h-14 rounded-full object-cover border-2 border-white"
                                 width={56}

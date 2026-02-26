@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { 
   hasPermission, 
   hasAnyPermission, 

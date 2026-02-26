@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase";
-import { APIResponse } from "@/lib/supabase-helpers";
+import { ResponseHelper } from "@/lib/supabase-helpers";
 
 // ===============================================
 // TIPOS DE DATOS
@@ -85,28 +85,28 @@ export async function POST(req: NextRequest) {
 
     // Validación de entrada
     if (!name || !email || !password) {
-      return APIResponse.error("Nombre, email y contraseña son requeridos");
+      return ResponseHelper.error("Nombre, email y contraseña son requeridos");
     }
 
     if (password.length < 6) {
-      return APIResponse.error("La contraseña debe tener al menos 6 caracteres");
+      return ResponseHelper.error("La contraseña debe tener al menos 6 caracteres");
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      return APIResponse.error("Formato de email inválido");
+      return ResponseHelper.error("Formato de email inválido");
     }
 
     // Ejecutar registro directamente con Supabase
     const result = await registerWithSupabase({ name, email, password, telefono });
 
-    return APIResponse.success({
+    return ResponseHelper.success({
       user: result.user,
       message: result.message
     });
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error en el registro";
-    return APIResponse.error(
+    return ResponseHelper.error(
       message,
       400
     );
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
     const email = searchParams.get('email');
 
     if (!email) {
-      return APIResponse.error("Email es requerido");
+      return ResponseHelper.error("Email es requerido");
     }
 
     // Verificar directamente en Supabase
@@ -138,12 +138,12 @@ export async function GET(req: NextRequest) {
     
     const exists = !error && data;
 
-    return APIResponse.success({
+    return ResponseHelper.success({
       exists: !!exists,
       email
     });
 
   } catch {
-    return APIResponse.error("Error verificando usuario", 500);
+    return ResponseHelper.error("Error verificando usuario", 500);
   }
 }

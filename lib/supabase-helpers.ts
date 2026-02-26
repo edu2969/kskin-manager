@@ -31,8 +31,8 @@ export function createSuccessResponse<T>(data: T): APIResponse<T> {
   return createResponse(data, 200);
 }
 
-// Clase APIResponse con métodos estáticos para compatibilidad
-export class APIResponse {
+// Clase para crear respuestas HTTP con métodos estáticos
+export class ResponseHelper {
   static success<T>(data: T, status: number = 200) {
     return new Response(JSON.stringify({
       ok: true,
