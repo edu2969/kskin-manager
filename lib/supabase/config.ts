@@ -23,9 +23,17 @@ export function getSupabaseConfig(context: 'server' | 'client' | 'middleware' = 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Si no hay variables de entorno, usar configuración mock
+  console.log('Checking env vars:', { url: !!url, anonKey: !!anonKey, context, isWindow: typeof window !== 'undefined' });
+
+  // Si no hay variables de entorno
   if (!url || !anonKey) {
-    console.warn('Variables de Supabase no encontradas, usando configuración mock');
+    // En el navegador, esto es un error fatal - no usar mock
+    if (typeof window !== 'undefined') {
+      throw new Error(`Variables de entorno faltantes para Supabase. Verifica NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY`);
+    }
+    
+    // Solo en server/build time usar mock
+    console.warn('Variables de Supabase no encontradas en server-side, usando configuración mock');
     configCache = {
       url: 'https://mock.supabase.co',
       anonKey: 'mock-anon-key'
