@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { APIResponse } from "@/lib/supabase-helpers";
 import { Session } from "@supabase/supabase-js";
 
@@ -36,6 +36,8 @@ interface LoginResponse {
 // ===============================================
 
 async function loginWithSupabase(email: string, password: string): Promise<LoginResponse> {
+  const supabase = await getSupabaseServerClient();
+  
   // 1. Autenticar con Supabase Auth
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -137,6 +139,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE() {
   try {
+    const supabase = await getSupabaseServerClient();
+    
     // Logout con Supabase
     const { error } = await supabase.auth.signOut();
     if (error) {

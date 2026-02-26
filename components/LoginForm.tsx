@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useForm, FieldErrors } from "react-hook-form";
 import { useState, useEffect } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import Image from "next/image";
 import Loader from "./Loader";
 
@@ -18,7 +18,7 @@ export default function LoginForm() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [redirecting, setRedirecting] = useState(false);  
   
-  const supabase = getSupabaseBrowserClient();
+  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
     const updateResolution = () => {

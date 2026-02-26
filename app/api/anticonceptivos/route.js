@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
 
@@ -11,6 +11,7 @@ export async function GET() {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
 
+        const supabase = await getSupabaseServerClient();
         const { data: anticonceptivos, error } = await supabase
             .from('metodos_anticonceptivos')
             .select('*')

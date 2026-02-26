@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { USER_ROLE } from "@/app/utils/constants";
@@ -7,6 +7,8 @@ export async function GET(req) {
     console.log("[GET] /api/recepcion/pacientePorRut - Iniciando petición");
     const { searchParams } = new URL(req.url);
     const rut = searchParams.get("rut");
+    
+    const supabase = await getSupabaseServerClient();
 
     if (!rut) {
         console.warn("Falta el parámetro rut");

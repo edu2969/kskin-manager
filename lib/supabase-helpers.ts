@@ -1,33 +1,64 @@
-import { NextResponse } from "next/server";
+export interface APIResponse<T = any> {
+  ok: boolean;
+  data?: T;
+  error?: string;
+  status?: number;
+}
 
+export function createResponse<T>(
+  data: T, 
+  status: number = 200
+): APIResponse<T> {
+  return {
+    ok: status >= 200 && status < 300,
+    data,
+    status
+  };
+}
+
+export function createErrorResponse(
+  error: string, 
+  status: number = 500
+): APIResponse {
+  return {
+    ok: false,
+    error,
+    status
+  };
+}
+
+export function createSuccessResponse<T>(data: T): APIResponse<T> {
+  return createResponse(data, 200);
+}
+
+// Clase APIResponse con métodos estáticos para compatibilidad
 export class APIResponse {
-  static success(data: unknown, message?: string) {
-    return NextResponse.json({
+  static success<T>(data: T, status: number = 200) {
+    return new Response(JSON.stringify({
       ok: true,
       data,
-      message
+      status
+    }), {
+      status,
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
   }
 
-  static error(error: string, status = 400, details?: unknown) {
-    return NextResponse.json({
+  static error(message: string, status: number = 500, details?: any) {
+    const response = {
       ok: false,
-      error,
-      details
-    }, { status });
-  }
-
-  static unauthorized(error = 'No autorizado') {
-    return NextResponse.json({
-      ok: false,
-      error
-    }, { status: 401 });
-  }
-
-  static notFound(error = 'Recurso no encontrado') {
-    return NextResponse.json({
-      ok: false,
-      error
-    }, { status: 404 });
+      error: message,
+      status,
+      ...(details && { details })
+    };
+    
+    return new Response(JSON.stringify(response), {
+      status,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 }

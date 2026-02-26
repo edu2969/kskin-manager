@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { APIResponse } from "@/lib/supabase-helpers";
 
 // ===============================================
@@ -37,6 +37,7 @@ interface RegisterResponse {
 
 async function registerWithSupabase(userData: RegisterRequest): Promise<RegisterResponse> {
   const { name, email, password, telefono } = userData;
+  const supabase = await getSupabaseServerClient();
   
   // 1. Crear usuario en Supabase Auth
   const { data, error } = await supabase.auth.signUp({
@@ -119,6 +120,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const supabase = await getSupabaseServerClient();
+    
     const { searchParams } = new URL(req.url);
     const email = searchParams.get('email');
 

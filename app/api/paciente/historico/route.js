@@ -1,11 +1,12 @@
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
 import { USER_ROLE } from "@/app/utils/constants";
 
 export async function GET(req) {
     console.log("[GET] /api/paciente/historico - Iniciando petición");
-
+    
+    const supabase = await getSupabaseServerClient();
     const { searchParams } = new URL(req.url);
     const pacienteId = searchParams.get("pacienteId");
 

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
 import { USER_ROLE } from "@/app/utils/constants";
@@ -8,7 +8,8 @@ import { USER_ROLE } from "@/app/utils/constants";
 export async function GET(req) {
     try {
         console.log("[GET] /api/paciente/ficha - Iniciando petición");
-
+        
+        const supabase = await getSupabaseServerClient();
         const { searchParams } = req.nextUrl;
         const pacienteId = normalizeQueryParam(searchParams.get("pacienteId"));
         const fichaId = normalizeQueryParam(searchParams.get("fichaId"));

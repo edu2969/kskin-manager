@@ -96,7 +96,7 @@ export default function Panoramica() {
     return (
         <main className="flex h-screen bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60]">
             <Recepcion rol={rol}
-                nombreProfesional={nombreProfesional(panoramica?.profesional?.email || "")}
+                nombreProfesional={user?.nombre || ""}
                 pacienteSeleccionado={pacienteSeleccionado}
                 setPacienteSeleccionado={setPacienteSeleccionado}
                 boxSeleccionado={boxSeleccionado}

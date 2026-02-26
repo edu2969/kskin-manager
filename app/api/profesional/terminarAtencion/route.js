@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
 import { USER_ROLE } from "@/app/utils/constants";
@@ -6,7 +6,8 @@ import { USER_ROLE } from "@/app/utils/constants";
 export async function POST() {
     try {
         console.log("[terminarAtencion] Iniciando petición");
-
+        
+        const supabase = await getSupabaseServerClient();
         const { user } = await getAuthenticatedUser();
         if (!user) {
             console.warn("[terminarAtencion] No autorizado");

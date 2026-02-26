@@ -7,8 +7,7 @@
 
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { useOnVisibilityChange } from '@/components/prefabs/useOnVisibilityChange';
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser-client';
 
 // ===============================================
 // TIPOS DE DATOS
@@ -47,6 +46,10 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
+  
+  // Cliente de Supabase para browser
+  const supabase = createSupabaseBrowserClient();
   
   // ===============================================
   // FUNCIONES DE SUPABASE
@@ -129,12 +132,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  useOnVisibilityChange(async () => {
-    console.log("REFRESCANDO SESIÓN POR VISIBILITY CHANGE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-    await refreshSession();
-  });
-
   const refreshSession = async () => {
+    // Evitar refrescos innecesarios si ya hay una carga en progreso
+    if (isLoadingUser) {
+      console.log('Carga de usuario en progreso, omitiendo refresh...');
+      return;
+    }
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -147,8 +151,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const loadUserData = async (userId: string) => {
+    // Evitar llamadas duplicadas
+    if (isLoadingUser) {
+      console.log('Ya hay una carga de usuario en progreso, omitiendo...');
+      return;
+    }
+    
     try {
-      console.log('Iniciando loadUserData para el usuario:', userId);      
+      console.log('Iniciando loadUserData para el usuario:', userId);
+      setIsLoadingUser(true);
+      
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .select(`
@@ -170,15 +182,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         email: userData.email,
         nombre: userData.nombre,
         rol: userData.rol
-      })
+      });
     } catch (error) {
       console.error('Error en loadUserData:', error);
       throw error;
+    } finally {
+      setIsLoadingUser(false);
     }
   }
             
 
   useEffect(() => {
+    let mounted = true;
+    
     const initAuth = async () => {
       try {
         console.log('Intentando recuperar la sesión de Supabase...');
@@ -191,12 +207,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         console.log("Sessión recuperada:", session);
 
-        if (session?.user) {
-          console.log('Sesión encontrada:', session);
-          await loadUserData(session.user.id);
-        } else {
-          console.log('No se encontró una sesión activa.');
-          setUser(null);
+        if (mounted) {
+          if (session?.user) {
+            console.log('Sesión encontrada:', session);
+            await loadUserData(session.user.id);
+          } else {
+            console.log('No se encontró una sesión activa.');
+            setUser(null);
+          }
         }
       } catch (error) {
         if (error instanceof Error && error.message === 'Auth session missing') {
@@ -205,24 +223,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.error('Error al inicializar la autenticación:', error);
         }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     initAuth();
 
-    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación - solo para eventos importantes
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Cambio en el estado de autenticación:', event);
-      if (session?.user) {
-        await loadUserData(session.user.id);
-      } else {
-        setUser(null);
+      
+      if (!mounted) return;
+      
+      // Solo procesar eventos importantes
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+        } else if (session?.user && event === 'SIGNED_IN') {
+          await loadUserData(session.user.id);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription?.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription?.subscription.unsubscribe();
+    };
   }, []);
 
   const authenticated = !!user;

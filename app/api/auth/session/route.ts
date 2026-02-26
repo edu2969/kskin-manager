@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { supabase } from "@/lib/supabase";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import { APIResponse } from "@/lib/supabase-helpers";
 
 interface SessionResponse {
@@ -17,6 +17,8 @@ interface SessionResponse {
 
 async function getSupabaseSession(): Promise<SessionResponse> {
   console.log("Obteniendo sesión de Supabase...");
+  const supabase = await getSupabaseServerClient();
+  
   // 1. Obtener usuario actual de Supabase Auth
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
@@ -100,6 +102,8 @@ export async function GET() {
 
 export async function POST() {
   try {
+    const supabase = await getSupabaseServerClient();
+    
     const { data, error } = await supabase.auth.refreshSession();
 
     if (error) {

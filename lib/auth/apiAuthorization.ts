@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabase';
 
 // ===============================================
 // TIPOS DE DATOS
@@ -29,6 +29,8 @@ export async function authorize(
 ): Promise<{ authorized: boolean; user?: AuthorizedUser; error?: string }> {
   
   try {
+    const supabase = await getSupabaseServerClient();
+    
     // 1. Verificar token de autorización
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
@@ -38,7 +40,7 @@ export async function authorize(
     }
 
     // 2. Validar token con Supabase
-    const { data: { user }, error: tokenError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: tokenError } = await supabase.auth.getUser();
     
     if (tokenError || !user) {
       return { authorized: false, error: 'Token inválido o expirado' };

@@ -4,6 +4,9 @@ const nextConfig = {
 
   serverExternalPackages: ['@supabase/supabase-js'],
 
+  // Para Next.js 16 - configuración de Turbopack
+  turbopack: {},
+
   webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       config.resolve.fallback = {

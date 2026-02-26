@@ -1,47 +1,32 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createSupabaseServerClient } from "./server-client";
 
 export async function getAuthenticatedUser() {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        async getAll() {
-          const allCookies = await cookies();
-          return allCookies.getAll().map(({ name, value }) => ({ name, value }));
-        },
-        async setAll(cookiesToSet) {
-          const allCookies = await cookies();
-          for (const { name, value, options } of cookiesToSet) {
-            allCookies.set(name, value, options);
-          }
-        },
-      },
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.error('Error getting authenticated user:', error);
+      return { user: null, error };
     }
-  );
 
-  // Fetch the authenticated user
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+    if (!user) {
+      return { user: null, error: new Error('No authenticated user') };
+    }
 
-  if (error || !user) {
-    throw new Error("Unauthorized");
-  }  
-
-  const userId = user.id;  
-
-  const { data: userData, error: userError } = await supabase
-    .from("usuarios")
-    .select("id, rol")
-    .eq("id", userId)
-    .single();
-
-  if (userError || !userData) {
-    throw new Error("User not found");
+    return { user, error: null };
+  } catch (error) {
+    console.error('Failed to get authenticated user:', error);
+    return { user: null, error };
   }
+}
 
-  return { user, userData };
+export async function requireAuth() {
+  const { user, error } = await getAuthenticatedUser();
+  
+  if (!user || error) {
+    throw new Error('Authentication required');
+  }
+  
+  return user;
 }
