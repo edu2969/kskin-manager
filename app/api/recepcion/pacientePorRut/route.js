@@ -15,7 +15,7 @@ export async function GET(req) {
         return NextResponse.json({ error: "Falta el parámetro rut" }, { status: 400 });
     }
 
-    const { user } = await getAuthenticatedUser();
+    const { data: user } = await getAuthenticatedUser();
     if (!user) {
         return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }

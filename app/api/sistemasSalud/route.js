@@ -7,7 +7,7 @@ export async function GET() {
         console.log("[GET] /api/sistemasSalud - Iniciando petición");
         
         const supabase = await getSupabaseServerClient();
-        const { user } = await getAuthenticatedUser();
+        const { data: user } = await getAuthenticatedUser();
         if (!user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }

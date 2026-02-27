@@ -6,7 +6,7 @@ export async function GET() {
     try {
         console.log("[GET] /api/anticonceptivos - Iniciando petición");
 
-        const { user } = await getAuthenticatedUser();
+        const { data: user } = await getAuthenticatedUser();
         if (!user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }

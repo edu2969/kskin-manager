@@ -9,7 +9,7 @@ export async function POST(req) {
         console.log("[POST] /api/recepcion - Iniciando petición");
         
         const supabase = await getSupabaseServerClient();
-        const { user } = await getAuthenticatedUser();
+        const { data: user } = await getAuthenticatedUser();
         if (!user) {
             console.warn("[POST] /api/recepcion - No autorizado");
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });

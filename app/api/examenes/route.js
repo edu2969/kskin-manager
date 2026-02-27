@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     try {
-        const { user } = await getAuthenticatedUser();
+        const { data: user } = await getAuthenticatedUser();
         if (!user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }

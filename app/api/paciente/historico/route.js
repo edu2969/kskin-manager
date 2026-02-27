@@ -14,7 +14,7 @@ export async function GET(req) {
         return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
     }
 
-    const { user } = await getAuthenticatedUser();
+    const { data: user } = await getAuthenticatedUser();
     if (!user) {
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }

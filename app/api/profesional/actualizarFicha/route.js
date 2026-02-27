@@ -67,7 +67,7 @@ export async function POST(req) {
         console.log("[actualizarFicha] Iniciando petición");
         
         const supabase = await getSupabaseServerClient();
-        const { user } = await getAuthenticatedUser();
+        const { data: user } = await getAuthenticatedUser();
         if (!user) {
             console.warn("[actualizarFicha] No autorizado");
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });

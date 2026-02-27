@@ -21,7 +21,7 @@ export async function GET(req) {
             return NextResponse.json({ error: 'Paciente ID or Ficha ID is required' }, { status: 400 });
         }
 
-        const { user } = await getAuthenticatedUser();
+        const { data: user } = await getAuthenticatedUser();
         if (!user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
