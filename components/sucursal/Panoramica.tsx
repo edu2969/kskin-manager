@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { CiPower } from "react-icons/ci";
-import { useOnVisibilityChange } from '@/components/prefabs/useOnVisibilityChange';
 import { Toaster } from 'react-hot-toast';
 import { useRouter } from "next/navigation";
 import Recepcion from "./Recepcion";
@@ -55,17 +54,7 @@ export default function Panoramica() {
             queryClient.invalidateQueries({ queryKey: ["panoramica"] });
         }
     }, [lastUpdate, setCurrentLastUpdate, currentLastUpdate, queryClient]);
-
-    useOnVisibilityChange(async () => {
-        queryClient.invalidateQueries({ queryKey: ["lastUpdate"] });
-    });
-
-    const nombreProfesional = (email: string) => {
-        if (!email) return "";
-        const nombre = email.split("@")[0];
-        return nombre.charAt(0).toUpperCase() + nombre.slice(1);
-    }
-
+    
     const timers = useRef<Record<string, NodeJS.Timeout>>({});        
         
     const iniciarProgreso = (boxId: string) => {
