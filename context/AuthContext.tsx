@@ -220,6 +220,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     
     let mounted = true;
+    let authInitialized = false;
     
     const initAuth = async () => {
       try {
@@ -241,6 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             console.log('No se encontró una sesión activa.');
             setUser(null);
           }
+          authInitialized = true;
         }
       } catch (error) {
         if (error instanceof Error && error.message === 'Auth session missing') {
@@ -251,6 +253,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } finally {
         if (mounted) {
           setLoading(false);
+          authInitialized = true;
         }
       }
     };
@@ -263,13 +266,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       if (!mounted) return;
       
-      // Solo procesar eventos importantes
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-        } else if (session?.user && event === 'SIGNED_IN') {
+      // Esperar a que la inicialización termine para evitar race conditions
+      if (!authInitialized) {
+        console.log('Auth aún inicializando, omitiendo onAuthStateChange');
+        return;
+      }
+      
+      // Para evitar race conditions, debounce los eventos SIGNED_IN
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Solo procesar si no hay una carga de usuario en progreso
+        if (!isLoadingUser) {
           await loadUserData(session.user.id);
+        } else {
+          console.log('Carga de usuario ya en progreso, omitiendo onAuthStateChange');
         }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
         setLoading(false);
       }
     });

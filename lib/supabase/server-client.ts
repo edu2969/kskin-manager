@@ -19,28 +19,15 @@ interface ServerClientOptions {
  */
 export async function createSupabaseServerClient(options: ServerClientOptions = {}): Promise<ReturnType<typeof createServerClient>> {
   try {
-    // PROTECCIÓN AGRESIVA: Durante build time o sin variables, devolver cliente mock
-    if (typeof window === 'undefined' && 
-        (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
-      return {
-        from: () => ({ select: () => ({ data: null, error: null }) }),
-        auth: { getUser: async () => ({ data: { user: null }, error: null }) }
-      } as any;
-    }
-
+    console.log("Creando cliente Supabase para servidor... ##############################");
     // Obtener configuración de manera segura
     const config = getSupabaseConfig('server');
     
-    // Si config es mock, devolver cliente mock
-    if (config.url === 'https://mock.supabase.co') {
-      return {
-        from: () => ({ select: () => ({ data: null, error: null }) }),
-        auth: { getUser: async () => ({ data: { user: null }, error: null }) }
-      } as any;
-    }
-    
     // Obtener cookies del servidor
     const cookieStore = await cookies();
+
+    // VERIFICACIÓN DE COOKIES DEL SERVIDOR
+    const allCookies = cookieStore.getAll();
 
     // Crear cliente con configuración de cookies
     const client = createServerClient(
@@ -68,11 +55,8 @@ export async function createSupabaseServerClient(options: ServerClientOptions = 
     return client;
 
   } catch (error) {
-    // Si cualquier cosa falla, devolver cliente mock
-    return {
-      from: () => ({ select: () => ({ data: null, error: null }) }),
-      auth: { getUser: async () => ({ data: { user: null }, error: null }) }
-    } as any;
+    console.error('Error creating Supabase server client:', error);
+    throw error;
   }
 }
 

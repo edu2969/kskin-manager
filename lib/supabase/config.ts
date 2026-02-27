@@ -8,37 +8,26 @@ export interface SupabaseConfig {
   anonKey: string;
 }
 
-let configCache: SupabaseConfig | null = null;
-
 export function clearConfigCache() {
-  configCache = null;
+  // No-op - cache removed
 }
 
 export function getSupabaseConfig(context: 'server' | 'client' | 'middleware' = 'client'): SupabaseConfig {
-  // Si ya tenemos la config en cache, devolverla
-  if (configCache) {
-    return configCache;
-  }
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  console.log('Checking env vars:', { url: !!url, anonKey: !!anonKey, context, isWindow: typeof window !== 'undefined' });
-
   // Si no hay variables de entorno
   if (!url || !anonKey) {
-    // En el navegador, esto es un error fatal - no usar mock
-    if (typeof window !== 'undefined') {
-      throw new Error(`Variables de entorno faltantes para Supabase. Verifica NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY`);
+    // Solo para build time en server-side
+    if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+      console.warn('Using mock config for production build');
+      return {
+        url: 'https://mock.supabase.co',
+        anonKey: 'mock-anon-key'
+      };
     }
     
-    // Solo en server/build time usar mock
-    console.warn('Variables de Supabase no encontradas en server-side, usando configuración mock');
-    configCache = {
-      url: 'https://mock.supabase.co',
-      anonKey: 'mock-anon-key'
-    };
-    return configCache;
+    throw new Error(`Variables de entorno faltantes para Supabase. Verifica NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY`);
   }
 
   // Validar formato de URL
@@ -48,9 +37,8 @@ export function getSupabaseConfig(context: 'server' | 'client' | 'middleware' = 
     throw new Error(`NEXT_PUBLIC_SUPABASE_URL no es una URL válida: ${url}`);
   }
 
-  // Cache y retornar configuración válida
-  configCache = { url, anonKey };
-  return configCache;
+  // Retornar configuración válida
+  return { url, anonKey };
 }
 
 export function hasSupabaseConfig(): boolean {

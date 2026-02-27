@@ -29,12 +29,11 @@ async function getSupabaseSession(): Promise<SessionResponse> {
     };
   }
 
-  // 2. Obtener información adicional del usuario y sus cargos
+  // 2. Obtener información adicional del usuario
   const { data: usuario, error: userError } = await supabase
     .from('usuarios')
     .select(`*`)
     .eq('id', user.id)
-    .is('cargos.hasta', null) // Solo cargos activos
     .single();
 
   if (userError || !usuario) {

@@ -1,13 +1,15 @@
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase/server-client";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { USER_ROLE } from "@/app/utils/constants";
 
-export async function GET() {
+export async function GET(request) {
     console.log("[GET] /api/panoramica/lastUpdate - Iniciando petición");
     
-    const supabase = await getSupabaseServerClient();
-    const { user } = await getAuthenticatedUser();
+    const supabase = await createSupabaseServerClient();
+    console.log("[GET] /api/panoramica/lastUpdate - Supabase client creado -------------------------------------------->");
+    const { data: user } = await getAuthenticatedUser();
+    console.log("[GET] /api/panoramica/lastUpdate - Resultado de getAuthenticatedUser:", { user });
     if (!user) {
         return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
