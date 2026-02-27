@@ -31,7 +31,8 @@ export default function Panoramica() {
             const data = await res.json();
             console.log("Panoramica data fetched", data);
             return data;
-        }
+        },
+        enabled: !!user
     });
     
     const { data: lastUpdate } = useQuery({
@@ -41,12 +42,9 @@ export default function Panoramica() {
             if (!res.ok) throw new Error("Error fetching last update");
             const data = await res.json();
             return data.updatedAt ? new Date(data.updatedAt) : new Date();
-        }
+        },
+        enabled: !!user
     });
-
-    useEffect(() => {
-        console.log("User: ", user);
-    }, [user]);
 
     useEffect(() => {
         if(currentLastUpdate && lastUpdate && lastUpdate > currentLastUpdate) {
@@ -54,7 +52,7 @@ export default function Panoramica() {
             queryClient.invalidateQueries({ queryKey: ["panoramica"] });
         }
     }, [lastUpdate, setCurrentLastUpdate, currentLastUpdate, queryClient]);
-    
+
     const timers = useRef<Record<string, NodeJS.Timeout>>({});        
         
     const iniciarProgreso = (boxId: string) => {
