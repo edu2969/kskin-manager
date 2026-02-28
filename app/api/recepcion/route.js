@@ -29,7 +29,7 @@ export async function POST(req) {
         const body = await req.json();
         console.log("[POST] /api/recepcion - body recibido:", body);
 
-        let pacienteId = body.pacienteId;
+        let pacienteId = body.paciente?.id || null;
 
         if (!pacienteId) {
             const pacienteData = body.paciente;

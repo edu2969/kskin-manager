@@ -46,11 +46,12 @@ export default function ModalRegistroPaciente({
     }    
 
     const onSubmit = async (formData: INuevoArribo) => {
+        console.log("Formulario enviado con datos:", formData, pacienteEncontrado);
         if (!pacienteEncontrado) return;
         registrarArribo({
             id: pacienteEncontrado.id || null,
             numeroIdentidad: rutBusqueda,
-            nombreCompleto: formData.nombreCompleto || "",
+            nombreCompleto:  formData.nombreCompleto || "",
             genero: formData.genero || pacienteEncontrado.genero,
             tratoEspecial: pacienteEncontrado.tratoEspecial || false,
             nombreSocial: formData.nombreSocial || pacienteEncontrado.nombreSocial || ""

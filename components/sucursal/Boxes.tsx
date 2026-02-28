@@ -24,8 +24,9 @@ export default function Boxes({
     pacienteSeleccionado: IPaciente | null;
 }) {
     const handleBoxSeleccionado = (box: IBox) => {
-        if(role !== USER_ROLE.profesional) return;
+        if(role !== USER_ROLE.profesional) return;        
         setBoxSeleccionado(box);
+        if(!pacienteSeleccionado) return;
         const nuevoArribo = {
             id: pacienteSeleccionado?.id || ""
         }

@@ -46,13 +46,9 @@ export async function getAuthenticatedUser(
 ): Promise<AuthResult<User>> {
   try {
     const supabase = await createSupabaseServerClient();
-    console.log("Obteniendo usuario autenticado con Supabase...");
     const { data, error }: UserResponse = await supabase.auth.getUser();
-
-    console.log("DATA ERROR", { data, error });
     
     if (error) {
-      console.log("*********************** ERROR!!!!", error);
       return {
         success: false,
         data: null,
@@ -62,7 +58,6 @@ export async function getAuthenticatedUser(
     }
 
     if (!data.user) {
-      console.log("*********************** ERROR 2!!!!", error);
       const noUserError = new Error('Usuario no autenticado');
       
       if (options.requireAuth) {
@@ -73,8 +68,7 @@ export async function getAuthenticatedUser(
           message: 'Autenticación requerida'
         };
       }
-
-      console.log("He llegado acá!!!, URRRAAAAA---------------------------------------->");
+      
       return {
         success: true,
         data: null,
@@ -82,8 +76,6 @@ export async function getAuthenticatedUser(
         message: 'No hay usuario autenticado'
       };
     }
-
-    console.log("He llegado acá!!!, URRRAAAAA----------------------------------------> 22222222222222222222222");
 
     return {
       success: true,

@@ -29,12 +29,14 @@ export default function Recepcion({
     const queryClient = useQueryClient();
 
     const registrarArribo = async (nuevoArribo: INuevoArribo) => {
+        console.log("Registrando nuevo arribo:", nuevoArribo);
         setLoading(true);
         try {
             const nombreCompletoSeparado = (nuevoArribo.nombreCompleto || "").split(" ");
             const cantidadNombre = nombreCompletoSeparado.length === 5 ? 3 : nombreCompletoSeparado.length === 2 ? 1 : 2;            
             const body = {
                     paciente: {
+                        id: nuevoArribo.id || null,
                         nombres: nombreCompletoSeparado.slice(0, cantidadNombre).join(" "),
                         apellidos: nombreCompletoSeparado.slice(cantidadNombre).join(" "),
                         numeroIdentidad: nuevoArribo.numeroIdentidad,

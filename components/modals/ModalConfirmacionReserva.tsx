@@ -89,7 +89,7 @@ export default function ModalConfirmacionReserva({
 
     return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
         <div className="fixed inset-0 bg-black/30" />
-        <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-[96%] md:width-[400px]">
+        <div className="relative bg-[#EFEADE] rounded-xl shadow-xl p-8 z-10 w-[96%] md:w-[400px]">
             <button
                 className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
                 onClick={onClose}
