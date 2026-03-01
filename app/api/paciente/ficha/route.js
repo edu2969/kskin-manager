@@ -66,6 +66,7 @@ export async function GET(req) {
                 profesional:profesionales (
                     id,                    
                     usuario:usuarios (
+                        id,
                         nombre,
                         email
                     ),
@@ -143,6 +144,7 @@ export async function GET(req) {
             },
             profesional: {
                 id: ficha.profesional.id,
+                usuarioId: ficha.profesional.usuario.id,
                 nombre: ficha.profesional.usuario.nombre,
                 email: ficha.profesional.usuario.email,
                 especialidades: ficha.profesional.especialidades.map((e) => ({
@@ -156,7 +158,7 @@ export async function GET(req) {
                 nivelEstres: ficha.higiene?.nivel_estres,
                 calidadDormir: ficha.higiene?.calidad_dormir,
                 habitoAlimenticio: ficha.higiene?.habito_alimenticio,
-            },            
+            },
             fecha: ficha.fecha,
             tratamiento: ficha.tratamiento,
             duracionTratamientoSemanas: ficha.duracion_tratamiento_semanas,

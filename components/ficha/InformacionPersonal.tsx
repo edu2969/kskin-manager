@@ -34,6 +34,10 @@ export default function InformacionPersonal({
         }
     });
 
+    useEffect(() => {
+        console.log("Es médico?", esMedico);
+    }, [esMedico]);
+
     // Observar el valor actual del sistema de salud en el formulario
     const sistemaSaludIdValue = useWatch({
         control,

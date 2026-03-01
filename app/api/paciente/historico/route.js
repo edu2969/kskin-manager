@@ -33,7 +33,7 @@ export async function GET(req) {
     const { data: fichas, error: fichasError } = await supabase
         .from("fichas")
         .select(`
-            id, fecha, tratamiento,
+            id, fecha, tratamiento, anamnesis,
             profesional:profesionales (
                 usuario_id ( nombre, email ),
                 profesional_especialidades (
@@ -58,7 +58,8 @@ export async function GET(req) {
         nombreProfesional: ficha.profesional?.usuario_id?.nombre,
         especialidades: ficha.profesional?.profesional_especialidades?.map(e => e.especialidad_id?.nombre) || [],
         alias: ficha.profesional?.usuario_id?.email?.split("@")[0] || "none",
-        tratamiento: ficha.tratamiento
+        tratamiento: ficha.tratamiento,
+        anamnesis: ficha.anamnesis
     }));
 
     console.log("Respuesta formateada:", historico);

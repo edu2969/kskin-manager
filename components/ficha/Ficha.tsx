@@ -164,11 +164,11 @@ export default function Ficha({ pacienteId, fichaId }: {
         }
     }, [ficha, reset]);
 
-    const esMedico = useCallback(() => {
+    const esMedico = useCallback(() => {        
         const profesional = ficha?.profesional;
         if (!profesional || !profesional.especialidades || !profesional.especialidades.length) {
             return false;
-        }        
+        }
         return profesional.especialidades.some((esp: { nombre: string }) => {            
             return esp.nombre === 'Medicina';
         });

@@ -9,6 +9,9 @@ import { useQuery } from "@tanstack/react-query";
 import { AiOutlineMan, AiOutlineWoman } from "react-icons/ai";
 import { FaPersonCircleQuestion } from "react-icons/fa6";
 import { useRouter } from "next/navigation";
+import { useAuthorization } from "@/lib/auth/useAuthorization";
+import { useEffect } from "react";
+import { MdEditDocument } from "react-icons/md";
 dayjs.locale('es');
 dayjs.extend(relativeTime);
 
@@ -20,6 +23,9 @@ export function ModalDetalleFicha({
     onClose: () => void;
 }) {
     const router = useRouter();
+    const { user } = useAuthorization();
+    const rol = user?.rol || 0;
+
     const { data: ficha } = useQuery<IFichaDetalle>({
         queryKey: ['fichaDetalle', fichaId],
         queryFn: async () => {
@@ -32,8 +38,8 @@ export function ModalDetalleFicha({
             return data;
         },
         enabled: !!fichaId
-    })
-
+    });
+    
     const calcularEdad = (fechaNacimiento: Date | null) => {
         if (!fechaNacimiento) return null;
         return dayjs().diff(dayjs(fechaNacimiento), 'year');
@@ -59,7 +65,7 @@ export function ModalDetalleFicha({
                 {ficha && (
                     <div>
                         <DialogTitle className="text-2xl font-bold mb-2">
-                            Consulta Médica - {dayjs(ficha.fecha).format('DD/MM/YYYY')}
+                            Consulta Médica - {dayjs(ficha.fecha).format('DD/MMM/YYYY')}
                         </DialogTitle>
                         <div className="flex items-center gap-6 text-sm text-white/90">
                             <span className="flex items-center gap-2">
@@ -71,7 +77,9 @@ export function ModalDetalleFicha({
                                     Inicio: {dayjs(ficha.fecha).format('HH:mm')}                                    
                                 </span>
                             )}                            
-                            <span>Duración: {dayjs(ficha.finishedAt).diff(dayjs(ficha.fecha), 'minutes')} minutos</span>
+                            {ficha.finishedAt && (
+                                <span>Duración: {dayjs(ficha.finishedAt).diff(dayjs(ficha.fecha), 'minutes')} minutos</span>
+                            )}
                         </div>
                     </div>
                 )}
@@ -79,11 +87,11 @@ export function ModalDetalleFicha({
 
             {/* Contenido del detalle */}
             {ficha && (
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-2 md:p-6">
                     <div className="grid gap-2 md:gap-6">
 
                         {/* Información del Paciente */}
-                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
+                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-2 md:p-5">
                             <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
                                 👤 Información del Paciente
                             </h3>
@@ -137,7 +145,7 @@ export function ModalDetalleFicha({
 
                         {/* Antecedentes del Paciente */}
                         {(ficha.paciente.antecedentes?.length > 0) && (
-                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-5">
+                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-2 md:p-5">
                                 <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                                     📚 Antecedentes del Paciente
                                 </h3>
@@ -173,68 +181,68 @@ export function ModalDetalleFicha({
                         )}
 
                         {/* Información de Higiene */}
-                        {ficha.paciente.higiene && (
-                            <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
+                        {ficha.higiene && (
+                            <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-2 md:p-5">
                                 <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
                                     🌿 Hábitos e Higiene
                                 </h3>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                    {ficha.paciente.higiene.cantidadCigarrillosSemanales > 0 && (
+                                    {ficha.higiene.cantidadCigarrillosSemanales > 0 && (
                                         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                             <p className="font-semibold text-red-700 flex items-center gap-2">
                                                 🚬 Tabaquismo
                                             </p>
                                             <p className="text-red-600">
-                                                {ficha.paciente.higiene.cantidadCigarrillosSemanales} cigarrillos por semana
+                                                {ficha.higiene.cantidadCigarrillosSemanales} cigarrillos por semana
                                             </p>
                                         </div>
                                     )}
-                                    {ficha.paciente.higiene.aguaConsumidaDiariaLitros > 0 && (
+                                    {ficha.higiene.aguaConsumidaDiariaLitros > 0 && (
                                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                             <p className="font-semibold text-blue-700 flex items-center gap-2">
                                                 💧 Hidratación
                                             </p>
-                                            <p className="text-blue-600">{ficha.paciente.higiene.aguaConsumidaDiariaLitros} ml por día</p>
+                                            <p className="text-blue-600">{ficha.higiene.aguaConsumidaDiariaLitros} ml por día</p>
                                         </div>
                                     )}
-                                    {ficha.paciente.higiene.horasEjerciciosSemanales > 0 && (
+                                    {ficha.higiene.horasEjerciciosSemanales > 0 && (
                                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                             <p className="font-semibold text-orange-700 flex items-center gap-2">
                                                 🏃‍♂️ Ejercicio
                                             </p>
-                                            <p className="text-orange-600">{ficha.paciente.higiene.horasEjerciciosSemanales} horas por semana</p>
+                                            <p className="text-orange-600">{ficha.higiene.horasEjerciciosSemanales} horas por semana</p>
                                         </div>
                                     )}
-                                    {ficha.paciente.higiene.nivelEstres !== null && ficha.paciente.higiene.nivelEstres !== undefined && (
+                                    {ficha.higiene.nivelEstres !== null && ficha.higiene.nivelEstres !== undefined && (
                                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
                                             <p className="font-semibold text-purple-700 flex items-center gap-2">
                                                 Nivel de Estrés
                                             </p>
                                             <p className="text-purple-600">
-                                                {ficha.paciente.higiene.nivelEstres === 'bajo' && '😌 Bajo'}
-                                                {ficha.paciente.higiene.nivelEstres === 'medio' && '😐 Medio'}
-                                                {ficha.paciente.higiene.nivelEstres === 'alto' && '😰 Alto'}
+                                                {ficha.higiene.nivelEstres === 'bajo' && '😌 Bajo'}
+                                                {ficha.higiene.nivelEstres === 'medio' && '😐 Medio'}
+                                                {ficha.higiene.nivelEstres === 'alto' && '😰 Alto'}
                                             </p>
                                         </div>
                                     )}
-                                    {ficha.paciente.higiene.calidadDormir !== null && ficha.paciente.higiene.calidadDormir !== undefined && (
+                                    {ficha.higiene.calidadDormir !== null && ficha.higiene.calidadDormir !== undefined && (
                                         <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
                                             <p className="font-semibold text-indigo-700 flex items-center gap-2">
                                                 Calidad del Sueño
                                             </p>
                                             <p className="text-indigo-600">
-                                                {ficha.paciente.higiene.calidadDormir === 'buena' && '😴 Bueno'}
-                                                {ficha.paciente.higiene.calidadDormir === 'regular' && '😪 Regular'}
-                                                {ficha.paciente.higiene.calidadDormir === 'mala' && '😵 Malo'}
+                                                {ficha.higiene.calidadDormir === 'buena' && '😴 Bueno'}
+                                                {ficha.higiene.calidadDormir === 'regular' && '😪 Regular'}
+                                                {ficha.higiene.calidadDormir === 'mala' && '😵 Malo'}
                                             </p>
                                         </div>
                                     )}
-                                    {ficha.paciente.higiene.habitoAlimenticio && (
+                                    {ficha.higiene.habitoAlimenticio && (
                                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:col-span-2">
                                             <p className="font-semibold text-yellow-700 flex items-center gap-2 mb-2">
                                                 🍎 Hábitos Alimenticios
                                             </p>
-                                            <p className="text-yellow-600 whitespace-pre-wrap">{ficha.paciente.higiene.habitoAlimenticio}</p>
+                                            <p className="text-yellow-600 whitespace-pre-wrap">{ficha.higiene.habitoAlimenticio}</p>
                                         </div>
                                     )}
                                 </div>
@@ -243,7 +251,7 @@ export function ModalDetalleFicha({
 
                         {/* Tabla de Partos */}
                         {ficha.paciente.partos?.length > 0 && (
-                            <div className="bg-gradient-to-r from-pink-50 to-pink-100 border border-pink-200 rounded-xl p-5 mt-6">
+                            <div className="bg-gradient-to-r from-pink-50 to-pink-100 border border-pink-200 rounded-xl p-2 md:p-5 mt-2 md:mt-6">
                                 <h3 className="text-lg font-bold text-pink-800 mb-3 flex items-center gap-2">
                                     🤱 Partos
                                 </h3>
@@ -275,27 +283,45 @@ export function ModalDetalleFicha({
                             </div>
                         )}
 
-                        {/* Antecedentes adicionales */}
-                        <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-5">
-                            <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
-                                🩺 Antecedentes adicionales
+                        {/* Tratamientos */}
+                        <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-2 md:p-5">
+                            <h3 className="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
+                                🩹 Tratamiento
                             </h3>
                             <div className="space-y-2">
-                                {ficha.paciente?.antecedentesAdicionales &&
+                                {ficha.tratamiento &&
                                     <div className="bg-white px-3 py-2 rounded-lg text-gray-700">
-                                        • <strong>Antecedentes Adicionales:</strong> {ficha.paciente.antecedentesAdicionales}
+                                        • {ficha.tratamiento}
                                     </div>}
                             </div>
                         </div>
 
-                        <div className="flex">
-                            <span className="text-sm text-gray-500 mt-2"
-                            onClick={() => {
-                                router.push(`/modulos/ficha?fichaId=${ficha.id}`);
-                            }}>
-                                Editar
-                            </span>
-                        </div>
+                        {/* Anamnesis */}
+                        {ficha.anamnesis && <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-2 md:p-5">
+                            <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+                                🩺 Anamnesis
+                            </h3>
+                            <div className="space-y-2">
+                                {ficha.anamnesis &&
+                                    <div className="bg-white px-3 py-2 rounded-lg text-gray-700">
+                                        • {ficha.anamnesis}
+                                    </div>}
+                            </div>
+                        </div>}
+
+                        {user && ficha && user.id === ficha.profesional.usuarioId && (
+                            <div className="flex justify-end mt-6">                                
+                                <button
+                                    onClick={() => {
+                                        router.push(`/modulos/ficha?fichaId=${ficha.id}`);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#6a3858] to-[#8e9b6d] text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 hover:scale-105"
+                                >
+                                    <MdEditDocument size={18} />
+                                    Editar
+                                </button>
+                            </div>
+                        )}
 
 
                     </div>

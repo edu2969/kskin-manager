@@ -25,8 +25,7 @@ interface BrowserClientOptions {
 export function createSupabaseBrowserClient(options: BrowserClientOptions = {}): SupabaseClient {
   // Verificar si estamos en el servidor
   if (typeof window === 'undefined') {
-    // Durante build/server-side, retornar un mock que no ejecute nada
-    console.warn('⚠️ createSupabaseBrowserClient llamado en server-side. Retornando mock client.');
+    // Durante build/server-side, retornar un mock que no ejecute nada    
     return createMockClient();
   }
 

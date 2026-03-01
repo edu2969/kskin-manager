@@ -105,7 +105,7 @@ export default function HistoricoFichas({
                                     {historico && historico.map((ficha) => (
                                         <div
                                             key={ficha.fichaId}
-                                            className="bg-gradient-to-r from-[#f6eedb] to-[#fad379]/20 border border-[#d5c7aa] rounded-lg md:p-3 hover:shadow-md transition-all cursor-pointer"
+                                            className="bg-gradient-to-r from-[#f6eedb] to-[#fad379]/20 border border-[#d5c7aa] rounded-lg py-1 md:p-3 hover:shadow-md transition-all cursor-pointer"
                                             onClick={() => handleVerDetalle(ficha.fichaId)}
                                         >
                                             <div className="md:flex md:items-center md:justify-between px-2 md:px-4 pb-1">
@@ -141,8 +141,10 @@ export default function HistoricoFichas({
                                                                 {dayjs(ficha.fecha).format('DD/MM/YYYY')}
                                                             </span>
                                                         </div>
-                                                        {/* Tratamiento */}
-                                                        {ficha.tratamiento && (<p className="line-clamp-3 text-xs text-gray-400">
+                                                        {/* Anamnesis */}
+                                                        {ficha.anamnesis ? (<p className="line-clamp-3 text-xs text-gray-400">
+                                                            <strong>Anamnesis:</strong> {ficha.anamnesis}
+                                                        </p>) : (<p className="line-clamp-3 text-xs text-gray-400">
                                                             <strong>Tratamiento:</strong> {ficha.tratamiento}
                                                         </p>)}
                                                     </div>

@@ -1,6 +1,7 @@
 import { Control, UseFormRegister, UseFormSetValue, useWatch } from "react-hook-form";
 import { FaCaretSquareRight } from "react-icons/fa";
 import { IFichaForm } from "./types";
+import { useAutoSaveContext } from '../../context/AutoSaveContext';
 
 export default function Higiene({ 
     register, 
@@ -25,6 +26,13 @@ export default function Higiene({
         control,
         name: "higiene.calidadDormir"
     }) ?? "";
+
+    const { saveField } = useAutoSaveContext();
+
+    // ✅ AGREGAR función helper para auto-guardado
+    const handleAutoSave = (fieldName: string, value: string | number) => {
+        saveField(fieldName, value);
+    };
     
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
         <details className="group">
@@ -43,6 +51,7 @@ export default function Higiene({
                             onChange={(e) => {
                                 const nextValue = e.target.checked ? Math.max(cantidadCigarrillosSemanales, 1) : 0;
                                 setValue("higiene.cantidadCigarrillosSemanales", nextValue, { shouldDirty: true });
+                                handleAutoSave("higiene.cantidad_cigarrillos_semanales", nextValue);
                             }}
                             className="text-[#ac9164] w-6 h-6"
                         />
@@ -54,6 +63,7 @@ export default function Higiene({
                                     min="0"
                                     {...register("higiene.cantidadCigarrillosSemanales", { valueAsNumber: true })}
                                     className="w-16 border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                    onBlur={(e) => handleAutoSave("higiene.cantidad_cigarrillos_semanales", e.target.value)}
                                 />
                                 <span className="text-xs text-[#8e9b6d]">por día</span>
                             </div>
@@ -66,6 +76,7 @@ export default function Higiene({
                             min="0"
                             {...register("higiene.aguaConsumidaDiariaLitros", { valueAsNumber: true })}
                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                            onBlur={(e) => handleAutoSave("higiene.agua_consumida_diaria_litros", e.target.value)}
                         />
                     </div>
                     <div>
@@ -76,6 +87,7 @@ export default function Higiene({
                             step="0.5"
                             {...register("higiene.horasEjercicioSemanales", { valueAsNumber: true })}
                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                            onBlur={(e) => handleAutoSave("higiene.horas_ejercicio_semanales", e.target.value)}
                         />
                     </div>
                     <fieldset className="border rounded-md px-4 pb-4 space-y-2 col-span-2">
@@ -105,6 +117,7 @@ export default function Higiene({
                                                 index === 0 ? "bajo" : index === 1 ? "medio" : "alto",
                                                 { shouldDirty: true }
                                             );
+                                            handleAutoSave("higiene.nivel_estres", index === 0 ? "bajo" : index === 1 ? "medio" : "alto");
                                         }}
                                         className={`flex-1 p-3 border-2 rounded-lg 
                                             transition-all ${isSelected ? selectedColors[index] : colors[index] } 
@@ -144,6 +157,7 @@ export default function Higiene({
                                                 index === 0 ? "buena" : index === 1 ? "regular" : "mala",
                                                 { shouldDirty: true }
                                             );
+                                            handleAutoSave("higiene.calidad_dormir", index === 0 ? "buena" : index === 1 ? "regular" : "mala");
                                         }}
                                         className={`flex-1 p-3 border-2 rounded-lg 
                                             transition-all ${isSelected ? selectedColors[index] : colors[index] } 
@@ -163,6 +177,7 @@ export default function Higiene({
                         className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-20 focus:border-[#ac9164] text-sm"
                         placeholder="Describe los hábitos alimenticios del paciente..."
                         {...register("higiene.habitoAlimenticio")}
+                        onBlur={(e) => handleAutoSave("higiene.habito_alimenticio", e.target.value)}
                     />
                 </div>
             </div>
