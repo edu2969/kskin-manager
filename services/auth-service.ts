@@ -19,3 +19,12 @@ export async function signOut() {
 
   await supabase.auth.signOut();
 }
+
+
+/*
+
+IPA Riesgo cardiovascular
+
+Cantidad de cirgarros desde que año
+
+*/
