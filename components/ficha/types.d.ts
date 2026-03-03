@@ -1,5 +1,5 @@
-export interface IParto {
-    id: string | null;
+export interface IPartoForm {
+    partoId: string | null;
     pacienteId?: string;
     fecha: string;
     genero: string;
@@ -40,6 +40,6 @@ export interface IFichaForm {
     metodosAnticonceptivos: string[];
     medicamentos: string[];
     antecedentes: string[];
-    partos: IParto[];
+    partos: IPartoForm[];
     higiene: IHigieneForm;
 }

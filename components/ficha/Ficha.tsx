@@ -142,12 +142,12 @@ export default function Ficha({ pacienteId, fichaId }: {
                 })) || [],
                 antecedentes: ficha.paciente?.antecedentes || [],
                 partos: ficha.paciente?.partos?.map((p: {
-                    id: string;
+                    partoId: string;
                     fecha: string;
                     genero: string;
                     tipo: string;
                 }) => ({
-                    id: p.id,  // ✅ CRÍTICO: Preservar el ID del parto
+                    partoId: p.partoId,  // ✅ CRÍTICO: Preservar el ID del parto
                     pacienteId: undefined,  // No necesario en formulario
                     fecha: p.fecha ? new Date(p.fecha).toISOString().split('T')[0] : "",
                     genero: p.genero || "",
@@ -166,7 +166,7 @@ export default function Ficha({ pacienteId, fichaId }: {
             reset(formData);
             console.log("📝 Formulario cargado con valores por defecto:", formData);
             console.log("👥 Partos cargados en formulario:", formData.partos);
-            console.log("🔑 IDs de partos mapeados:", formData.partos.map(p => ({ id: p.id, tipo: typeof p.id })));
+            console.log("🔑 IDs de partos mapeados:", formData.partos.map(p => ({ partoId: p.partoId, tipo: typeof p.partoId })));
         }
     }, [ficha, formMethods.reset]);
 

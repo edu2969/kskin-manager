@@ -141,7 +141,7 @@ export async function GET(req) {
                 })),
                 operaciones: ficha.paciente.operaciones,
                 partos: ficha.paciente.partos.map((p) => ({
-                    id: p.id,
+                    partoId: p.id,
                     fecha: p.fecha,
                     tipo: p.tipo,
                     genero: p.genero
