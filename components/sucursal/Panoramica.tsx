@@ -95,7 +95,7 @@ export default function Panoramica() {
                 pacienteSeleccionado={pacienteSeleccionado}
                 boxSeleccionado={boxSeleccionado}
                 setBoxSeleccionado={setBoxSeleccionado}
-                solicitarReserva={handleSolicitarReserva}/>
+                solicitarReserva={handleSolicitarReserva} />
 
             {rol === USER_ROLE.profesional && 
             <ModalConfirmacionReserva show={showModalConfirmacionReserva}

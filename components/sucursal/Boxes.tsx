@@ -3,6 +3,7 @@ import { LuDoorClosed, LuDoorOpen } from "react-icons/lu";
 import { AiOutlineMan, AiOutlineWoman } from "react-icons/ai";
 import { FaPersonCircleQuestion } from "react-icons/fa6";
 import { USER_ROLE } from "@/app/utils/constants";
+import { useRouter } from "next/navigation";
 
 const boxLibre = (box: IBox) => {
     return box.paciente == null;    
@@ -23,6 +24,7 @@ export default function Boxes({
     solicitarReserva: (paciente: INuevoArribo | null, box: IBox | null) => void;
     pacienteSeleccionado: IPaciente | null;
 }) {
+    const router = useRouter();
     const handleBoxSeleccionado = (box: IBox) => {
         if(role !== USER_ROLE.profesional) return;        
         setBoxSeleccionado(box);
@@ -31,6 +33,12 @@ export default function Boxes({
             id: pacienteSeleccionado?.id || ""
         }
         solicitarReserva(nuevoArribo, box);
+    }
+
+    const handleVerFicha = (box: IBox) => {
+        if(role !== USER_ROLE.profesional) return;        
+        if(!box.paciente) return;
+        router.push("/modulos/ficha?pacienteId=" + box.paciente.id);        
     }
 
     return (<section className="flex-1 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0.5 md:gap-6 p-0.5 md:p-8 content-start">
@@ -43,6 +51,7 @@ export default function Boxes({
                             ${boxSeleccionado?.id === box.id ? "bg-pink-300 text-pink-800" : ""}
                         `}
                 onClick={() => handleBoxSeleccionado(box)}
+                onDoubleClick={() => handleVerFicha(box)}
                 data-box-id={box.id}
             >
                 <div className="flex">

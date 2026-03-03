@@ -1,5 +1,6 @@
 export interface IParto {
-    numero: number;
+    id: string | null;
+    pacienteId?: string;
     fecha: string;
     genero: string;
     tipo: string;

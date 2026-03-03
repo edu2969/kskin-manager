@@ -6,7 +6,7 @@ interface UseAutoSaveOptions {
     fichaId?: string;
     pacienteId?: string;
     delay?: number;
-    onSuccess?: () => void;
+    onSuccess?: (changes: Record<string, any>) => void;
     onError?: (error: Error) => void;
 }
 
@@ -21,6 +21,8 @@ export function useAutoSave({
 
     const mutation = useMutation({
         mutationFn: async (changes: Record<string, any>) => {
+            console.log('🔄 Enviando auto-save request con:', changes);
+            
             const response = await fetch('/api/profesional/actualizarFicha', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -31,18 +33,27 @@ export function useAutoSave({
                 })
             });
 
+            console.log('📡 Response status:', response.status, 'ok:', response.ok);
+
             if (!response.ok) {
                 const error = await response.json();
+                console.error('❌ Response error:', error);
                 throw new Error(error.message || 'Error guardando cambios');
             }
 
-            return response.json();
+            const result = await response.json();
+            console.log('✅ Response success:', result);
+            return result;
         },
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
+            console.log('🎉 MUTATION onSuccess ejecutado! Data:', data, 'Variables:', variables);
             pendingChanges.current.clear();
-            onSuccess?.();
+            
+            // Ejecutar callback de éxito con los cambios guardados
+            onSuccess?.(variables);
         },
-        onError: (error: Error) => {
+        onError: (error: Error, variables) => {
+            console.error('💥 MUTATION onError ejecutado! Error:', error, 'Variables:', variables);
             onError?.(error);
         }
     });

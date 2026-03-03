@@ -21,9 +21,10 @@ export default function Anamnesis({
                 Descripción clínica
             </label>
             <textarea
-                className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white h-32 focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
                 {...register("anamnesis")}
                 placeholder="Describa la anamnesis y hallazgos del examen físico..."
+                rows={7}
                 onBlur={(e) => handleAutoSave("ficha.anamnesis", e.target.value)}
             />
         </div>

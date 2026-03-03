@@ -1,6 +1,6 @@
 CREATE TYPE nivel_estres AS ENUM ('bajo', 'medio', 'alto');
 CREATE TYPE calidad_dormir AS ENUM ('buena', 'regular', 'mala');
-CREATE TYPE tipo_parto AS ENUM ('normal', 'cesarea');
+CREATE TYPE tipo_parto AS ENUM ('normal', 'cesarea', 'aborto');
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -104,7 +104,6 @@ CREATE TABLE paciente_partos (
     paciente_id UUID NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
     fecha DATE,
     tipo tipo_parto,
-    abortado BOOLEAN DEFAULT false,
     genero VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

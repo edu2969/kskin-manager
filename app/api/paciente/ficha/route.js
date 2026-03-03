@@ -56,9 +56,9 @@ export async function GET(req) {
                     alergias,
                     antecedentes:paciente_antecedentes ( antecedente_id ),
                     partos:paciente_partos (
+                        id,
                         fecha,
                         tipo,
-                        abortado,
                         genero
                     ),                    
                     operaciones
@@ -115,6 +115,7 @@ export async function GET(req) {
         }
 
         console.log("Ficha encontrada:", ficha);
+        console.log("🔍 Partos desde DB:", ficha.paciente.partos);
 
         // Transform the data to match the IFichaDetalle interface
         const fichaDetalle = {
@@ -139,7 +140,12 @@ export async function GET(req) {
                     frecuencia: m.frecuencia,
                 })),
                 operaciones: ficha.paciente.operaciones,
-                partos: ficha.paciente.partos,
+                partos: ficha.paciente.partos.map((p) => ({
+                    id: p.id,
+                    fecha: p.fecha,
+                    tipo: p.tipo,
+                    genero: p.genero
+                })),
                 antecedentesAdicionales: ficha.paciente.antecedentes_adicionales || null,
             },
             profesional: {

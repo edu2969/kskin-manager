@@ -3,7 +3,6 @@ import { getAuthenticatedUser } from "@/lib/supabase/supabase-auth";
 import { NextResponse } from "next/server";
 import { USER_ROLE } from "@/app/utils/constants";
 
-// Configuración de parsing para campos específicos
 const FIELD_PARSERS = {
     // Campos numéricos (SMALLINT/INTEGER)
     'sistema_salud_id': { type: 'integer' },
@@ -11,6 +10,7 @@ const FIELD_PARSERS = {
     'agua_consumida_diaria_litros': { type: 'numeric' },
     'horas_ejercicio_semanales': { type: 'numeric' },
     'duracion_tratamiento_semanas': { type: 'integer' },
+    'numero': { type: 'integer' }, // ✅ NUEVO: Para número de parto
     
     // Campos de fecha
     'fecha_nacimiento': { type: 'date' },
@@ -125,6 +125,7 @@ export async function POST(req) {
         const pacienteUpdates = {};
         const fichaUpdates = {};
         const higieneUpdates = {};
+        const partosOperations = []; // Para operaciones de partos
 
         const pacienteFields = [
             'nombres', 'apellidos', 'numero_identidad', 'email', 'fecha_nacimiento', 'genero', 
@@ -140,8 +141,67 @@ export async function POST(req) {
             'nivel_estres', 'calidad_dormir', 'habito_alimenticio'
         ];
 
+        // Obtener partos actuales de la tabla separada (solo para logging si es necesario)
+        const { data: partosActuales, error: partosError } = await supabase
+            .from("paciente_partos")
+            .select("*")
+            .eq("paciente_id", pacienteId || fichaActual?.paciente_id);
+
+        if (partosError) {
+            console.error("[actualizarFicha] Error obteniendo partos:", partosError);
+        }
+
         Object.entries(changes).forEach(([fieldPath, value]) => {
-            // Convertir fieldPath tipo "paciente.nombres" o "higiene.nivelEstres"
+            // Manejar comando de eliminación de partos
+            if (fieldPath.startsWith('paciente.parto.delete.')) {
+                const match = fieldPath.match(/^paciente\.parto\.delete\.([^\.]+)$/);
+                if (match) {
+                    const [, partoId] = match;
+                    console.log("[actualizarFicha] Marcando parto para eliminar:", partoId);
+                    partosOperations.push({
+                        type: 'delete',
+                        partoId,
+                        paciente_id: pacienteId || fichaActual?.paciente_id
+                    });
+                }
+                return; // Skip el procesamiento normal
+            }
+
+            // Manejar campos de partos especialmente
+            if (fieldPath.startsWith('paciente.parto.')) {
+                const match = fieldPath.match(/^paciente\.parto\.([^\.]+)\.(\w+)$/);
+                if (match) {
+                    const [, partoId, campo] = match;
+                    console.log("[actualizarFicha] Procesando parto:", partoId, campo, value);
+                    
+                    // Solo procesar campos que existen en la tabla
+                    const camposValidos = ['fecha', 'tipo', 'genero'];
+                    if (!camposValidos.includes(campo)) {
+                        console.log("[actualizarFicha] Campo no válido:", campo);
+                        return; // Skip campos no válidos
+                    }
+                    
+                    // Preparar la operación de parto
+                    let parsedValue = parseFieldValue(campo, value);
+                    
+                    // Para el campo tipo, usar directamente el valor del enum
+                    if (campo === 'tipo') {
+                        // Los valores válidos son: 'normal', 'cesarea', 'aborto'
+                        parsedValue = value;
+                    }
+                    
+                    partosOperations.push({
+                        type: 'upsert',
+                        partoId,
+                        field: campo,
+                        value: parsedValue,
+                        paciente_id: pacienteId || fichaActual?.paciente_id
+                    });
+                }
+                return; // Skip el procesamiento normal
+            }
+
+            // Procesamiento normal para otros campos
             const [categoria, campo] = fieldPath.includes('.') ? fieldPath.split('.') : ['ficha', fieldPath];
             
             // Parsear valor según el tipo de campo
@@ -156,18 +216,76 @@ export async function POST(req) {
             }
         });
 
-        // Aplicar actualizaciones
+        console.log("[actualizarFicha] Operaciones de partos después del forEach:", partosOperations);
+
         const updatePromises = [];
 
         console.log("[actualizarFicha] ids:", pacienteId, fichaActual);
 
+        // Actualizaciones de paciente (sin partos)
         if (Object.keys(pacienteUpdates).length > 0) {
             updatePromises.push(
                 supabase
                     .from("pacientes")
-                    .update({ ...pacienteUpdates })
+                    .update(pacienteUpdates)
                     .eq("id", pacienteId || fichaActual?.paciente_id)
             );
+        }
+
+        // Manejar operaciones de partos
+        if (partosOperations.length > 0) {
+            console.log("[actualizarFicha] Procesando operaciones de partos:", partosOperations);
+            
+            // Separar operaciones de eliminación y upsert
+            const deleteOperations = partosOperations.filter(op => op.type === 'delete');
+            const upsertOperations = partosOperations.filter(op => op.type === 'upsert');
+
+            // Ejecutar eliminaciones primero
+            deleteOperations.forEach(op => {
+                if (!op.partoId.startsWith('new_')) {
+                    console.log("[actualizarFicha] Eliminando parto:", op.partoId);
+                    updatePromises.push(
+                        supabase
+                            .from("paciente_partos")
+                            .delete()
+                            .eq("id", op.partoId)
+                    );
+                }
+            });
+
+            // Agrupar operaciones upsert por ID de parto
+            const partosGrouped = {};
+            upsertOperations.forEach(op => {
+                if (!partosGrouped[op.partoId]) {
+                    partosGrouped[op.partoId] = {};
+                }
+                partosGrouped[op.partoId][op.field] = op.value;
+            });
+
+            console.log("[actualizarFicha] Partos agrupados:", partosGrouped);
+
+            // Ejecutar upserts para cada parto
+            Object.entries(partosGrouped).forEach(([partoId, partoData]) => {
+                if (partoId.startsWith('new_')) {
+                    // Crear nuevo parto - aquí SÍ incluir paciente_id
+                    const newPartoData = { ...partoData, paciente_id: pacienteId || fichaActual?.paciente_id };
+                    console.log("[actualizarFicha] Creando nuevo parto:", newPartoData);
+                    updatePromises.push(
+                        supabase
+                            .from("paciente_partos")
+                            .insert(newPartoData)
+                    );
+                } else {
+                    // Actualizar parto existente por ID - NO incluir paciente_id
+                    console.log("[actualizarFicha] Actualizando parto:", partoId, partoData);
+                    updatePromises.push(
+                        supabase
+                            .from("paciente_partos")
+                            .update(partoData)
+                            .eq("id", partoId)
+                    );
+                }
+            });
         }
 
         if (Object.keys(fichaUpdates).length > 0 && fichaActual) {
@@ -184,32 +302,29 @@ export async function POST(req) {
                 // Actualizar higiene existente
                 updatePromises.push(
                     supabase
-                        .from("higienes")
+                        .from("ficha_higiene")
                         .update({ ...higieneUpdates })
-                        .eq("id", fichaActual.higiene_id)
+                        .eq("ficha_id", fichaActual.id)
                 );
             } else {
                 // Crear nueva entrada de higiene y asociarla a la ficha
                 updatePromises.push(
                     supabase
-                        .from("higienes")
-                        .insert(higieneUpdates)
-                        .select("id")
-                        .single()
-                        .then(({ data: higiene, error }) => {
-                            if (!error && higiene) {
-                                return supabase
-                                    .from("fichas")
-                                    .update({ higiene_id: higiene.id })
-                                    .eq("id", fichaActual.id);
-                            }
-                            return { error };
-                        })
+                        .from("ficha_higiene")
+                        .insert({ ...higieneUpdates, ficha_id: fichaActual.id })
                 );
             }
         }
 
         const results = await Promise.all(updatePromises);
+        console.log("[actualizarFicha] Resultados de todas las operaciones:", results.map((r,i) => ({
+            index: i,
+            data: r.data,
+            error: r.error,
+            count: r.count,
+            status: r.status
+        })));
+        
         const errors = results.filter(result => result.error);
 
         if (errors.length > 0) {

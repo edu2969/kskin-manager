@@ -1,7 +1,9 @@
-import { UseFormRegister, useFieldArray, Control } from "react-hook-form";
+import { useEffect } from "react";
+import { UseFormRegister, useFieldArray, Control, useWatch } from "react-hook-form";
 import { IFichaForm, IParto } from "./types";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { FaCaretSquareRight } from "react-icons/fa";
+import { useAutoSaveContext } from "@/context/AutoSaveContext";
 
 export default function Partos({ 
     register,
@@ -10,14 +12,38 @@ export default function Partos({
     register: UseFormRegister<IFichaForm>;
     control: Control<IFichaForm>;
 }) {
+    const { saveField } = useAutoSaveContext();
+    
+    // Obtener los valores reales de partos del formulario
+    const partosValues = useWatch({ control, name: "partos" }) || [];
+    
+    const handleAutoSave = (fieldName: string, value: string) => {
+        console.log('🔍 Auto-save llamado con:', { fieldName, value });
+        const match = fieldName.match(/paciente\.parto\.([^\.]+)\./); 
+        console.log('🤷‍♂️ ID extraído del fieldName:', match ? match[1] : 'NO MATCH');
+        saveField(fieldName, value);
+    };
+    
+    // Función helper para obtener ID real del parto
+    const getPartoId = (index: number) => {
+        const partoReal = partosValues[index];
+        return partoReal?.id || `new_${Date.now()}_${index}`;
     const { fields, append, remove } = useFieldArray({
         control,
         name: "partos"
     });
+    
+    // ✅ NUEVO: Log cuando los fields cambian
+    useEffect(() => {
+        console.log("🔄 useFieldArray fields updated:", fields.map(f => ({ id: f.id, tipo: typeof f.id })));
+        console.log("👥 Valores reales de partos:", partosValues.map(p => ({ id: p?.id, tipo: typeof p?.id })));
+    }, [fields, partosValues]);    
 
     const handleAgregarParto = () => {
+        const nuevoPartoId = `new_${Date.now()}`; // ID único basado en timestamp
         const nuevoParto: IParto = {
-            numero: fields.length + 1,
+            id: nuevoPartoId,
+            pacienteId: undefined, // Se agregará en el backend para nuevos partos
             fecha: "",
             genero: "",
             tipo: ""
@@ -26,7 +52,15 @@ export default function Partos({
     };
 
     const handleRemoverParto = (index: number) => {
-        remove(index);        
+        const field = fields[index];
+        console.log("Removiendo parto:", index, "Field:", field); // Debug
+        // Si el parto tiene un ID real, eliminar de la base de datos
+        if (field.id && field.id !== undefined && !String(field.id).startsWith('new_')) {
+            console.log("Enviando comando de eliminación para:", field.id); // Debug
+            handleAutoSave(`paciente.parto.delete.${field.id}`, 'true');
+        }
+        // Remover del formulario
+        remove(index);
     };
 
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -57,20 +91,37 @@ export default function Partos({
                             </tr>
                         </thead>
                         <tbody>
-                            {fields.map((field, index) => (
+                            {fields
+                                .map((field, index) => ({ field, index }))
+                                .sort((a, b) => {
+                                    const fechaA = a.field.fecha || '';
+                                    const fechaB = b.field.fecha || '';
+                                    return fechaA.localeCompare(fechaB);
+                                })
+                                .map(({ field, index }, sortedIndex) => (
                                 <tr key={field.id}>
-                                    <td className="border border-[#d5c7aa] p-2 text-sm">{index + 1}.</td>
+                                    <td className="border border-[#d5c7aa] p-2 text-sm">{sortedIndex + 1}.</td>
                                     <td className="border border-[#d5c7aa] p-2 text-sm">
                                         <input
                                             type="date"
                                             {...register(`partos.${index}.fecha`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                            onBlur={(e) => {
+                                                const realPartoId = getPartoId(index);
+                                                console.log('📅 Fecha onBlur - index:', index, 'realPartoId:', realPartoId);
+                                                handleAutoSave(`paciente.parto.${realPartoId}.fecha`, e.target.value);
+                                            }}
                                         />
                                     </td>
                                     <td className="border border-[#d5c7aa] p-2">
                                         <select
                                             {...register(`partos.${index}.genero`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                            onChange={(e) => {
+                                                const realPartoId = getPartoId(index);
+                                                console.log('🛪 Genero onChange - index:', index, 'realPartoId:', realPartoId);
+                                                handleAutoSave(`paciente.parto.${realPartoId}.genero`, e.target.value);
+                                            }}
                                         >
                                             <option value="">Seleccionar</option>
                                             <option value="V">Varón</option>
@@ -82,11 +133,16 @@ export default function Partos({
                                         <select
                                             {...register(`partos.${index}.tipo`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                            onChange={(e) => {
+                                                const realPartoId = getPartoId(index);
+                                                console.log('🔄 Tipo onChange - index:', index, 'realPartoId:', realPartoId);
+                                                handleAutoSave(`paciente.parto.${realPartoId}.tipo`, e.target.value);
+                                            }}
                                         >
                                             <option value="">Seleccionar</option>
-                                            <option value="N">Natural</option>
-                                            <option value="C">Cesárea</option>
-                                            <option value="A">Aborto</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="cesarea">Cesárea</option>
+                                            <option value="aborto">Aborto</option>
                                         </select>
                                     </td>
                                     <td className="border border-[#d5c7aa] p-2 text-center">

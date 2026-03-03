@@ -34,6 +34,7 @@ const TABS_MEDICO = [
 
 const TABS_OTROS = [
     { key: "personal", label: "Información personal", color: "pink" },
+    { key: "anamnesis", label: "Anamnesis / Exámen Físico", color: "purple" },
     { key: "indicaciones", label: "Indicaciones", color: "sky" },
 ];
 
@@ -42,7 +43,7 @@ export default function Ficha({ pacienteId, fichaId }: {
     fichaId: string | null;
 }) {
     const [tab, setTab] = useState("personal");    
-    const { register, control, setValue, reset } = useForm<IFichaForm>({
+    const formMethods = useForm<IFichaForm>({
         defaultValues: {
             anamnesis: "",
             receta: "",
@@ -79,6 +80,8 @@ export default function Ficha({ pacienteId, fichaId }: {
             }
         }
     });
+    
+    const { register, control, setValue, reset } = formMethods;
     const [showTooltip, setShowTooltip] = useState(false);
     const [showModalSalir, setShowModalSalir] = useState(false);
     const router = useRouter();
@@ -139,12 +142,13 @@ export default function Ficha({ pacienteId, fichaId }: {
                 })) || [],
                 antecedentes: ficha.paciente?.antecedentes || [],
                 partos: ficha.paciente?.partos?.map((p: {
-                    number: number;
+                    id: string;
                     fecha: string;
                     genero: string;
                     tipo: string;
-                }, index: number) => ({
-                    numero: index + 1,
+                }) => ({
+                    id: p.id,  // ✅ CRÍTICO: Preservar el ID del parto
+                    pacienteId: undefined,  // No necesario en formulario
                     fecha: p.fecha ? new Date(p.fecha).toISOString().split('T')[0] : "",
                     genero: p.genero || "",
                     tipo: p.tipo || ""
@@ -161,8 +165,10 @@ export default function Ficha({ pacienteId, fichaId }: {
             
             reset(formData);
             console.log("📝 Formulario cargado con valores por defecto:", formData);
+            console.log("👥 Partos cargados en formulario:", formData.partos);
+            console.log("🔑 IDs de partos mapeados:", formData.partos.map(p => ({ id: p.id, tipo: typeof p.id })));
         }
-    }, [ficha, reset]);
+    }, [ficha, formMethods.reset]);
 
     const esMedico = useCallback(() => {        
         const profesional = ficha?.profesional;
@@ -220,7 +226,11 @@ export default function Ficha({ pacienteId, fichaId }: {
         router.back();
     }
 
-    return (<AutoSaveProvider fichaId={ficha?.id} pacienteId={pacienteId || undefined}>
+    return (<AutoSaveProvider 
+        fichaId={ficha?.id} 
+        pacienteId={pacienteId || undefined}
+        formMethods={formMethods}
+    >
         <div className="relative p-1 md:p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-screen">
             <AutoSaveIndicator />
 
