@@ -15,13 +15,15 @@ export default function InformacionPersonal({
     setValue,
     control,
     esMedico,
-    genero
+    genero,
+    alertaAlergias = false
 }: {    
     register: UseFormRegister<IFichaForm>;
     setValue: UseFormSetValue<IFichaForm>;
     control: Control<IFichaForm>;
     esMedico: boolean;
     genero: string;
+    alertaAlergias?: boolean;
 }) {
     const { data: sistemasSalud, isLoading } = useQuery({
         queryKey: ["sistemasSalud"],
@@ -163,7 +165,8 @@ export default function InformacionPersonal({
                 Alergias
             </label>
             <textarea
-                className={`w-full border rounded px-3 py-2 bg-white h-20 focus:ring-2 focus:ring-[#fad379]/20 
+                className={`w-full border rounded px-3 py-2 bg-white h-20 focus:ring-2 focus:ring-[#fad379]/20 ${
+                    alertaAlergias
                         ? 'border-red-500 focus:border-red-600'
                         : 'border-[#d5c7aa] focus:border-[#ac9164]'
                     }`}

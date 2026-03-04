@@ -53,6 +53,7 @@ export async function GET(req) {
                     telefono,
                     genero,
                     sistemas_salud ( id, nombre ),
+                    aplica_alergias,
                     alergias,
                     antecedentes:paciente_antecedentes ( antecedente_id ),
                     partos:paciente_partos (
@@ -132,7 +133,7 @@ export async function GET(req) {
                 genero: ficha.paciente.genero,
                 sistemaSaludId: ficha.paciente.sistemas_salud?.id || 0,
                 aplicaAlergias: ficha.paciente.aplica_alergias,
-                alergias: ficha.paciente.alergias ? ficha.paciente.alergias.split(',') : [],
+                alergias: ficha.paciente.alergias,
                 antecedentes: ficha.paciente.antecedentes?.map((a) => a.detalles),
                 medicamentos: ficha.paciente.medicamentos?.map((m) => ({
                     nombre: m.nombre, // Replace with actual name if available

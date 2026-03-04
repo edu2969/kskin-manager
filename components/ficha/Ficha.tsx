@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/es';
 import ModalConfirmacionSalir from "./modals/ModalConfirmacionSalir";
+import ModalAlertaAlergias from "./modals/ModalAlertaAlergias";
 import EncabezadoFicha from "./EncabezadoFicha";
 import Tratamiento from "./Tratamiento";
 import { useForm } from "react-hook-form";
@@ -84,6 +85,7 @@ export default function Ficha({ pacienteId, fichaId }: {
     const { register, control, setValue, reset } = formMethods;
     const [showTooltip, setShowTooltip] = useState(false);
     const [showModalSalir, setShowModalSalir] = useState(false);
+    const [showAlertaAlergias, setShowAlertaAlergias] = useState(false);
     const router = useRouter();
 
     const { data: ficha, isLoading: loadingFicha } = useQuery({
@@ -121,9 +123,8 @@ export default function Ficha({ pacienteId, fichaId }: {
                     fechaNacimiento: ficha.paciente?.fechaNacimiento 
                         ? new Date(ficha.paciente.fechaNacimiento).toISOString().split('T')[0] 
                         : "",
-                    alergias: Array.isArray(ficha.paciente?.alergias) 
-                        ? ficha.paciente.alergias.join(", ") 
-                        : ficha.paciente?.alergias || "",
+                    aplicaAlergias: ficha.paciente.aplicaAlergias,
+                    alergias: ficha.paciente.alergias,
                     medicamentos: "",
                     operaciones: ficha.paciente?.operaciones || "",
                     otroAnticonceptivo: "",
@@ -171,6 +172,11 @@ export default function Ficha({ pacienteId, fichaId }: {
             };
             
             reset(formData);
+            
+            // Mostrar alerta si aplicaAlergias es null
+            if (ficha.paciente?.aplicaAlergias === null) {
+                setShowAlertaAlergias(true);
+            }
         }
     }, [ficha, formMethods.reset]);
 
@@ -271,7 +277,8 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 setValue={setValue}
                                 control={control}
                                 genero={ficha?.paciente?.genero || ""}
-                                esMedico={esMedico()} />}
+                                esMedico={esMedico()}
+                                alertaAlergias={ficha?.paciente?.aplicaAlergias === null} />}
 
                         {tab === "anamnesis" && <Anamnesis
                                 register={register}
@@ -349,6 +356,11 @@ export default function Ficha({ pacienteId, fichaId }: {
                 isOpen={showModalSalir}
                 onClose={() => setShowModalSalir(false)}
                 terminarAtencion={handleTerminarAtencion}
+            />
+            
+            <ModalAlertaAlergias
+                isOpen={showAlertaAlergias}
+                onClose={() => setShowAlertaAlergias(false)}
             />
 
             {/* Overlay de finalización */}
