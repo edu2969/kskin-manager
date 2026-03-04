@@ -23,9 +23,11 @@ dayjs.extend(relativeTime);
 import type { IFichaForm } from "./types";
 import { AutoSaveProvider } from "@/providers/AutoSaveProvider";
 import { AutoSaveIndicator } from "../prefabs/AutoSaveIndicator";
+import MotivoConsulta from "./MotivoConsulta";
 
 const TABS_MEDICO = [
     { key: "personal", label: "Información personal", color: "pink" },
+    { key: "motivo", label: "Motivo de Consulta", color: "purple" },
     { key: "anamnesis", label: "Anamnesis / Exámen Físico", color: "purple" },
     { key: "examenes", label: "Exámenes", color: "purple" },
     { key: "indicaciones", label: "Indicaciones", color: "sky" },
@@ -35,6 +37,7 @@ const TABS_MEDICO = [
 
 const TABS_OTROS = [
     { key: "personal", label: "Información personal", color: "pink" },
+    { key: "motivo", label: "Motivo de Consulta", color: "purple" },
     { key: "anamnesis", label: "Anamnesis / Exámen Físico", color: "purple" },
     { key: "indicaciones", label: "Indicaciones", color: "sky" },
 ];
@@ -49,6 +52,7 @@ export default function Ficha({ pacienteId, fichaId }: {
             anamnesis: "",
             receta: "",
             tratamiento: "",
+            motivoConsulta: "",
             examenes: "",
             paciente: {
                 nombres: "",
@@ -110,6 +114,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                 anamnesis: ficha.anamnesis || "",
                 receta: ficha.receta || "",
                 tratamiento: ficha.tratamiento || "",
+                motivoConsulta: ficha.motivoConsulta || "",
                 examenes: ficha.examenes || "",
                 paciente: {
                     nombres: ficha.paciente?.nombres || "",
@@ -162,6 +167,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                     tipo: p.tipo || ""
                 })) || [],
                 higiene: {
+                    ipa: ficha.higiene?.ipa || 0,
                     cantidadCigarrillosSemanales: ficha.higiene?.cantidadCigarrillosSemanales || 0,
                     aguaConsumidaDiariaLitros: ficha.higiene?.aguaConsumidaDiariaLitros || 0,
                     horasEjercicioSemanales: ficha.higiene?.horasEjercicioSemanales || 0,
@@ -279,6 +285,9 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 genero={ficha?.paciente?.genero || ""}
                                 esMedico={esMedico()}
                                 alertaAlergias={ficha?.paciente?.aplicaAlergias === null} />}
+
+                        {tab === "motivo" && <MotivoConsulta 
+                            register={register} />}
 
                         {tab === "anamnesis" && <Anamnesis
                                 register={register}

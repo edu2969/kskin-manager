@@ -13,7 +13,8 @@ export interface IAnticonceptivoForm {
 }
 
 export interface IHigieneForm {
-    cantidadCigarrillosSemanales: number;
+    cantidadCigarrillosSemanales: number;    
+    ipa: number;
     aguaConsumidaDiariaLitros: number;
     horasEjercicioSemanales: number;
     nivelEstres: "bajo" | "medio" | "alto" | "";
@@ -26,6 +27,7 @@ export interface IFichaForm {
     receta: string;
     tratamiento: string;
     examenes: string;
+    motivoConsulta: string;
     paciente: {
         nombres: string;
         apellidos: string;
