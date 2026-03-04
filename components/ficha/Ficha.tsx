@@ -306,36 +306,108 @@ export default function Ficha({ pacienteId, fichaId }: {
                 </div>
 
                 {/* Lengüetas verticales tipo carpeta (derecha) */}
-                <div className="relative flex flex-row md:flex-col flex-wrap md:flex-nowrap justify-start bg-transparent h-auto md:h-full order-1 md:order-2 md:-ml-0.5 z-20 w-full md:w-auto md:max-w-[220px] gap-2 md:gap-0 px-2 md:px-0">
-                    {getTabsSegunEspecialidad().map((t, index) => {
-                        const isActive = tab === t.key;
-                        const isLast = index === getTabsSegunEspecialidad().length - 1;
-                        const isFirst = index === 0;
-                        return (
-                            <button
-                                key={t.key}
-                                className={`
-                                    ${isLast ? 'md:h-full' : 'md:h-32'} h-auto ${isFirst ? 'md:mt-0' : '-ml-3 md:-mt-3 md:ml-0'} 
-                                    inline-flex md:block items-center relative px-3 md:px-4 py-2 md:pt-6 text-md font-semibold w-auto md:w-full md:min-w-[200px]
-                                    border border-[#d5c7aa] md:border-l-0 rounded-tl-lg md:rounded-tl-none md:rounded-tr-lg 
-                                    ${isLast && 'md:rounded-br-lg'} 
-                                    ${isActive
-                                        ? "text-[#68563c] bg-[#f6eedb] md:border-l-0 rounded-t-lg md:rounded-none z-30 shadow-sm"
-                                        : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white md:border-l-2 md:border-l-[#d5c7aa] hover:md:border-l-[#ac9164] cursor-pointer rounded-t-lg md:rounded-none z-10"
-                                    }
-                                    text-left md:text-left transition-all duration-200 whitespace-nowrap
-                                `}
-                                style={{
-                                    borderBottomLeftRadius: '0'
-                                }}
-                                onClick={() => setTab(t.key)}
-                                type="button"
-                                tabIndex={isActive ? 0 : -1}
-                            >
-                                <p className="h-full flex flex-col items-start">{t.label}</p>
-                            </button>
-                        );
-                    })}
+                <div className="relative bg-transparent h-auto md:h-full order-1 md:order-2 md:-ml-0.5 z-20 w-full md:w-auto md:max-w-[220px] px-2 md:px-0">
+                    
+                    {/* Mobile: Tabs en orden invertido - arriba los últimos, abajo los primeros */}
+                    <div className="md:hidden flex flex-col">
+                        {/* Segunda mitad de tabs - van ARRIBA */}
+                        {getTabsSegunEspecialidad().length > 3 && (
+                            <div className="flex flex-row -space-x-1 -mb-1">
+                                {getTabsSegunEspecialidad().slice(3).map((t, index) => {
+                                    const isActive = tab === t.key;
+                                    return (
+                                        <button
+                                            key={t.key}
+                                            className={`
+                                                relative px-2 py-2 text-xs font-semibold flex-1 min-w-0
+                                                border border-[#d5c7aa] transition-all duration-200
+                                                rounded-t-lg
+                                                ${isActive
+                                                    ? "text-[#68563c] bg-[#f6eedb] border-[#ac9164] z-5"
+                                                    : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white cursor-pointer z-0"
+                                                }
+                                                ${index > 0 ? '-ml-px' : ''}
+                                            `}
+                                            style={{
+                                                borderBottomLeftRadius: '0',
+                                                borderBottomRightRadius: '0'
+                                            }}
+                                            onClick={() => setTab(t.key)}
+                                            type="button"
+                                            tabIndex={isActive ? 0 : -1}
+                                        >
+                                            <span className="truncate block leading-tight">{t.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        
+                        {/* Primera mitad de tabs - van ABAJO, conectando al contenido */}
+                        <div className="flex flex-row -space-x-1">
+                            {getTabsSegunEspecialidad().slice(0, 3).map((t, index) => {
+                                const isActive = tab === t.key;
+                                return (
+                                    <button
+                                        key={t.key}
+                                        className={`
+                                            relative px-2 py-2 text-xs font-semibold flex-1 min-w-0
+                                            border-t border-l border-r transition-all duration-200
+                                            rounded-t-lg
+                                            ${isActive
+                                                ? "text-[#68563c] bg-[#f6eedb] border-[#ac9164] z-30"
+                                                : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white border-[#d5c7aa] cursor-pointer z-20"
+                                            }
+                                            ${index > 0 ? '-ml-px' : ''}
+                                        `}
+                                        style={{
+                                            borderBottomLeftRadius: '0',
+                                            borderBottomRightRadius: '0',
+                                            borderBottom: isActive ? 'none' : '1px solid #d5c7aa'
+                                        }}
+                                        onClick={() => setTab(t.key)}
+                                        type="button"
+                                        tabIndex={isActive ? 0 : -1}
+                                    >
+                                        <span className="truncate block leading-tight">{t.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Desktop: Layout vertical original sin cambios */}
+                    <div className="hidden md:block">
+                        {getTabsSegunEspecialidad().map((t, index) => {
+                            const isActive = tab === t.key;
+                            const isLast = index === getTabsSegunEspecialidad().length - 1;
+                            const isFirst = index === 0;
+                            return (
+                                <button
+                                    key={t.key}
+                                    className={`
+                                        ${isLast ? 'md:h-full' : 'md:h-32'} h-auto ${isFirst ? 'md:mt-0' : '-ml-3 md:-mt-3 md:ml-0'} 
+                                        md:block items-center relative px-4 pt-6 text-md font-semibold w-full min-w-[200px]
+                                        border border-[#d5c7aa] md:border-l-0 rounded-tr-lg 
+                                        ${isLast && 'md:rounded-br-lg'} 
+                                        ${isActive
+                                            ? "text-[#68563c] bg-[#f6eedb] md:border-l-0 z-30 shadow-sm"
+                                            : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white md:border-l-2 md:border-l-[#d5c7aa] hover:md:border-l-[#ac9164] cursor-pointer z-10"
+                                        }
+                                        text-left transition-all duration-200 whitespace-nowrap
+                                    `}
+                                    style={{
+                                        borderBottomLeftRadius: '0'
+                                    }}
+                                    onClick={() => setTab(t.key)}
+                                    type="button"
+                                    tabIndex={isActive ? 0 : -1}
+                                >
+                                    <p className="h-full flex flex-col items-start">{t.label}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
