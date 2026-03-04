@@ -102,7 +102,6 @@ export default function Ficha({ pacienteId, fichaId }: {
         }
     });
 
-    // Cargar valores por defecto del formulario cuando la ficha se carga
     useEffect(() => {
         if (ficha) {
             const formData: IFichaForm = {
