@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { UseFormRegister, useFieldArray, Control } from "react-hook-form";
+import { UseFormRegister, useFieldArray, Control, useWatch } from "react-hook-form";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { IFichaForm, IAnticonceptivoForm } from "./types";
 import { useAutoSaveContext } from "@/context/AutoSaveContext";
@@ -15,6 +15,12 @@ export default function Anticonceptivos({
     const { saveField } = useAutoSaveContext();
 
     const { fields, append, remove } = useFieldArray({
+        control,
+        name: "metodosAnticonceptivos"
+    });
+
+    // Observar los valores del formulario para forzar re-render cuando cambien los datos
+    const watchedValues = useWatch({
         control,
         name: "metodosAnticonceptivos"
     });
@@ -88,17 +94,16 @@ export default function Anticonceptivos({
                         </thead>
                         <tbody>
                             {fields.map((field, index) => (
-                                <tr key={field.anticonceptivoId || field.id || index}>
+                                <tr key={`_metodo_anticonceptivo_${index}`}>
                                     <td className="border border-[#d5c7aa] p-2 text-sm">
                                         <input 
                                             type="hidden" 
                                             {...register(`metodosAnticonceptivos.${index}.anticonceptivoId`)}
-                                            defaultValue={field.anticonceptivoId || ""}
                                         />
                                         <select
                                             {...register(`metodosAnticonceptivos.${index}.metodoAnticonceptivoId`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                            defaultValue={field.metodoAnticonceptivoId > 0 ? field.metodoAnticonceptivoId : ""}
+                                            value={watchedValues?.[index]?.metodoAnticonceptivoId || ""}
                                             onChange={(e) => {
                                                 const selectedId = e.target.value;
                                                 if (selectedId && selectedId !== "0") {
@@ -119,7 +124,7 @@ export default function Anticonceptivos({
                                             type="date"
                                             {...register(`metodosAnticonceptivos.${index}.fechaDesde`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                            defaultValue={field.fechaDesde || ""}
+                                            value={watchedValues?.[index]?.fechaDesde || ""}
                                             onBlur={(e) => handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.fecha_desde`, e.target.value)}
                                         />
                                     </td>
@@ -128,7 +133,7 @@ export default function Anticonceptivos({
                                             type="date"
                                             {...register(`metodosAnticonceptivos.${index}.fechaHasta`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                            defaultValue={field.fechaHasta || ""}
+                                            value={watchedValues?.[index]?.fechaHasta || ""}
                                             onBlur={(e) => handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.fecha_hasta`, e.target.value)}
                                         />
                                     </td>
@@ -146,19 +151,7 @@ export default function Anticonceptivos({
                             ))}
                         </tbody>
                     </table>
-                )}
-                
-                {/* Campo de texto para otros métodos */}
-                <div className="mt-4">
-                    <label className="block text-sm text-[#68563c] mb-2">Otro método anticonceptivo:</label>
-                    <input
-                        type="text"
-                        placeholder="Especificar otro método anticonceptivo..."
-                        className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white text-sm focus:border-[#ac9164]"
-                        {...register("paciente.otroAnticonceptivo")}  
-                        onBlur={(e) => saveField("paciente.otro_anticonceptivo", e.target.value)}
-                    />
-                </div>
+                )}                
             </div>
         </details>
     </div>;
