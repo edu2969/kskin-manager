@@ -15,6 +15,8 @@ const FIELD_PARSERS = {
     // Campos de fecha
     'fecha_nacimiento': { type: 'date' },
     'fecha': { type: 'date' },
+    'fecha_desde': { type: 'date' }, // ✅ NUEVO: Para fechas de anticonceptivos
+    'fecha_hasta': { type: 'date' }, // ✅ NUEVO: Para fechas de anticonceptivos
     
     // Campos booleanos
     'ocupado': { type: 'boolean' },
@@ -175,11 +177,14 @@ export async function POST(req) {
                 if (match) {
                     const [, anticonceptivoId] = match;
                     console.log("[actualizarFicha] Marcando anticonceptivo para eliminar:", anticonceptivoId);
-                    anticonceptivosOperations.push({
-                        type: 'delete',
-                        anticonceptivoId,
-                        paciente_id: pacienteId || fichaActual?.paciente_id
-                    });
+                    // Solo eliminar si el ID no es un "new_" temporal
+                    if (!anticonceptivoId.startsWith('new_')) {
+                        anticonceptivosOperations.push({
+                            type: 'delete',
+                            anticonceptivoId,
+                            paciente_id: pacienteId || fichaActual?.paciente_id
+                        });
+                    }
                 }
                 return; // Skip el procesamiento normal
             }
@@ -192,7 +197,7 @@ export async function POST(req) {
                     console.log("[actualizarFicha] Procesando anticonceptivo:", anticonceptivoId, campo, value);
                     
                     // Solo procesar campos que existen en la tabla
-                    const camposValidos = ['metodo_anticonceptivo_id', 'fecha_desde', 'fecha_hasta'];
+                    const camposValidos = ['metodo_anticonceptivo_id'];
                     if (!camposValidos.includes(campo)) {
                         console.log("[actualizarFicha] Campo no válido:", campo);
                         return; // Skip campos no válidos
@@ -351,6 +356,7 @@ export async function POST(req) {
 
             // Ejecutar eliminaciones primero
             deleteAnticonceptivos.forEach(op => {
+                // Solo eliminar registros que existen en la BD (no los temporales "new_")
                 if (!op.anticonceptivoId.startsWith('new_')) {
                     console.log("[actualizarFicha] Eliminando anticonceptivo:", op.anticonceptivoId);
                     updatePromises.push(
@@ -376,8 +382,11 @@ export async function POST(req) {
             // Ejecutar upserts para cada anticonceptivo
             Object.entries(anticonceptivosGrouped).forEach(([anticonceptivoId, anticonceptivoData]) => {
                 if (anticonceptivoId.startsWith('new_')) {
-                    // Crear nuevo anticonceptivo - aquí SÍ incluir paciente_id
-                    const newAnticonceptivoData = { ...anticonceptivoData, paciente_id: pacienteId || fichaActual?.paciente_id };
+                    // Crear nuevo anticonceptivo - solo incluir campos necesarios
+                    const newAnticonceptivoData = { 
+                        metodo_anticonceptivo_id: anticonceptivoData.metodo_anticonceptivo_id,
+                        paciente_id: pacienteId || fichaActual?.paciente_id 
+                    };
                     console.log("[actualizarFicha] Creando nuevo anticonceptivo:", newAnticonceptivoData);
                     updatePromises.push(
                         supabase
@@ -387,6 +396,7 @@ export async function POST(req) {
                 } else {
                     // Actualizar anticonceptivo existente por ID - NO incluir paciente_id
                     console.log("[actualizarFicha] Actualizando anticonceptivo:", anticonceptivoId, anticonceptivoData);
+                    console.log("[actualizarFicha] Tipo de anticonceptivoId:", typeof anticonceptivoId, "Es UUID:", /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(anticonceptivoId));
                     updatePromises.push(
                         supabase
                             .from("paciente_metodo_anticonceptivo")

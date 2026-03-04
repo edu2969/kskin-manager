@@ -150,9 +150,7 @@ CREATE TABLE metodos_anticonceptivos (
 CREATE TABLE paciente_metodo_anticonceptivo (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     paciente_id UUID NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
-    metodo_anticonceptivo_id SMALLINT NOT NULL REFERENCES metodos_anticonceptivos(id),
-    fecha_desde DATE,
-    fecha_hasta DATE
+    metodo_anticonceptivo_id SMALLINT NOT NULL REFERENCES metodos_anticonceptivos(id)
 );
 
 -- Examenes table

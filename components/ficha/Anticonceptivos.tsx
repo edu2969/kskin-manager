@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { UseFormRegister, useFieldArray, Control, useWatch } from "react-hook-form";
+import { UseFormRegister, useFieldArray, Control } from "react-hook-form";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { IFichaForm, IAnticonceptivoForm } from "./types";
 import { useAutoSaveContext } from "@/context/AutoSaveContext";
 import { FaCaretSquareRight } from "react-icons/fa";
+import AutocompleteInput from "../prefabs/AutocompleteInput";
 
 export default function Anticonceptivos({ 
     register,
@@ -19,12 +20,6 @@ export default function Anticonceptivos({
         name: "metodosAnticonceptivos"
     });
 
-    // Observar los valores del formulario para forzar re-render cuando cambien los datos
-    const watchedValues = useWatch({
-        control,
-        name: "metodosAnticonceptivos"
-    });
-
     const { data: metodosAnticonceptivos } = useQuery({
         queryKey: ["metodosAnticonceptivos"],
         queryFn: async () => {
@@ -34,35 +29,52 @@ export default function Anticonceptivos({
         }
     });
 
-    const handleAgregarAnticonceptivo = () => {
-        const nuevoAnticonceptivoId = `new_${Date.now()}`; // ID único basado en timestamp
+    const handleAgregarAnticonceptivo = (selectedItem: { key: string | number; value: string }) => {
+        const nuevoAnticonceptivoId = `new_${Date.now()}`;
         const nuevoAnticonceptivo: IAnticonceptivoForm = {
             anticonceptivoId: nuevoAnticonceptivoId,
-            pacienteId: undefined, // Se agregará en el backend para nuevos anticonceptivos
-            metodoAnticonceptivoId: -1, // Valor temporal para indicar "no seleccionado"
-            fechaDesde: "",
-            fechaHasta: ""
+            pacienteId: undefined,
+            metodoAnticonceptivoId: Number(selectedItem.key)
         };
-        append(nuevoAnticonceptivo);
+        
+        // Verificar que no esté ya agregado
+        const yaExiste = fields.some(field => field.metodoAnticonceptivoId === Number(selectedItem.key));
+        if (!yaExiste) {
+            append(nuevoAnticonceptivo);
+            // Auto-save al agregar
+            handleAutoSave(`paciente.anticonceptivo.${nuevoAnticonceptivoId}.metodo_anticonceptivo_id`, String(selectedItem.key));
+        }
     };
 
     const handleAutoSave = (fieldName: string, value: string) => {
         console.log('🔍 Auto-save anticonceptivos llamado con:', { fieldName, value });
-        const match = fieldName.match(/paciente\.anticonceptivo\.([^\.]+)\./);
-        console.log('🤷‍♂️ ID extraído del fieldName:', match ? match[1] : 'NO MATCH');
         saveField(fieldName, value);
     };
 
     const handleRemoverAnticonceptivo = (index: number) => {
         const field = fields[index];
-        console.log("Removiendo anticonceptivo:", index, "Field:", field); // Debug
+        console.log("Removiendo anticonceptivo:", index, "Field:", field);
+        
         // Si el anticonceptivo tiene un ID real, eliminar de la base de datos
-        if (field.anticonceptivoId && field.anticonceptivoId !== undefined && !String(field.anticonceptivoId).startsWith('new_')) {
-            console.log("Enviando comando de eliminación para:", field.anticonceptivoId); // Debug
+        if (field.anticonceptivoId && !String(field.anticonceptivoId).startsWith('new_')) {
+            console.log("Enviando comando de eliminación para:", field.anticonceptivoId);
             handleAutoSave(`paciente.anticonceptivo.delete.${field.anticonceptivoId}`, 'true');
         }
+        
         // Remover del formulario
         remove(index);
+    };
+
+    // Preparar datos para el autocomplete
+    const autocompleteItems = metodosAnticonceptivos?.map((metodo: { id: number; nombre: string }) => ({
+        key: metodo.id,
+        value: metodo.nombre
+    })) || [];
+
+    // Obtener nombres de métodos seleccionados para mostrar
+    const getMetodoNombre = (metodoId: number) => {
+        const metodo = metodosAnticonceptivos?.find((m: { id: number }) => m.id === metodoId);
+        return metodo?.nombre || `Método ID: ${metodoId}`;
     };
 
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -73,85 +85,47 @@ export default function Anticonceptivos({
                 </span>
                 Métodos Anticonceptivos
             </summary>
-            <div className="mt-4">
-                <button
-                    type="button"
-                    onClick={handleAgregarAnticonceptivo}
-                    className="mb-4 bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d]"
-                >
-                    Agregar Método Anticonceptivo
-                </button>
+            <div className="mt-4 space-y-4">
+                {/* Autocomplete Input */}
+                <AutocompleteInput
+                    items={autocompleteItems}
+                    onSelect={handleAgregarAnticonceptivo}
+                    placeholder="Buscar y seleccionar método anticonceptivo..."
+                />
                 
+                {/* Métodos seleccionados como calugas */}
                 {fields.length > 0 && (
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-[#d5c7aa]">
-                                <th className="border border-[#ac9164] p-2 text-left text-sm">Método</th>
-                                <th className="border border-[#ac9164] p-2 text-left text-sm">Fecha Inicio</th>
-                                <th className="border border-[#ac9164] p-2 text-left text-sm">Fecha Fin</th>
-                                <th className="border border-[#ac9164] p-2 text-left text-sm">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {fields.map((field, index) => (
-                                <tr key={`_metodo_anticonceptivo_${index}`}>
-                                    <td className="border border-[#d5c7aa] p-2 text-sm">
-                                        <input 
-                                            type="hidden" 
-                                            {...register(`metodosAnticonceptivos.${index}.anticonceptivoId`)}
-                                        />
-                                        <select
-                                            {...register(`metodosAnticonceptivos.${index}.metodoAnticonceptivoId`)}
-                                            className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                            value={watchedValues?.[index]?.metodoAnticonceptivoId || ""}
-                                            onChange={(e) => {
-                                                const selectedId = e.target.value;
-                                                if (selectedId && selectedId !== "0") {
-                                                    handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.metodo_anticonceptivo_id`, selectedId);
-                                                }
-                                            }}
-                                        >
-                                            <option value="">Seleccionar método</option>
-                                            {metodosAnticonceptivos && metodosAnticonceptivos.map((metodo: { id: number; nombre: string; }) => (
-                                                <option key={metodo.id} value={metodo.id}>
-                                                    {metodo.nombre}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                    <td className="border border-[#d5c7aa] p-2 text-sm">
-                                        <input
-                                            type="date"
-                                            {...register(`metodosAnticonceptivos.${index}.fechaDesde`)}
-                                            className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                            value={watchedValues?.[index]?.fechaDesde || ""}
-                                            onBlur={(e) => handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.fecha_desde`, e.target.value)}
-                                        />
-                                    </td>
-                                    <td className="border border-[#d5c7aa] p-2 text-sm">
-                                        <input
-                                            type="date"
-                                            {...register(`metodosAnticonceptivos.${index}.fechaHasta`)}
-                                            className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
-                                            value={watchedValues?.[index]?.fechaHasta || ""}
-                                            onBlur={(e) => handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.fecha_hasta`, e.target.value)}
-                                        />
-                                    </td>
-                                    <td className="border border-[#d5c7aa] p-2 text-center">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoverAnticonceptivo(index)}
-                                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded-full transition-colors"
-                                            title="Eliminar método anticonceptivo"
-                                        >
-                                            <FaRegTrashCan size={14} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}                
+                    <div className="flex flex-wrap gap-2 mt-4">
+                        {fields.map((field, index) => (
+                            <div 
+                                key={field.anticonceptivoId || field.id || index}
+                                className="inline-flex items-center bg-[#f6eedb] text-[#68563c] px-3 py-1 rounded-full border border-[#d5c7aa] text-sm"
+                            >
+                                <input 
+                                    type="hidden" 
+                                    {...register(`metodosAnticonceptivos.${index}.anticonceptivoId`)}
+                                    value={field.anticonceptivoId || ""}
+                                />
+                                <input 
+                                    type="hidden" 
+                                    {...register(`metodosAnticonceptivos.${index}.metodoAnticonceptivoId`)}
+                                    value={field.metodoAnticonceptivoId || ""}
+                                />
+                                <span className="mr-2">
+                                    {getMetodoNombre(field.metodoAnticonceptivoId)}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoverAnticonceptivo(index)}
+                                    className="text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full p-1 transition-colors"
+                                    title="Eliminar método anticonceptivo"
+                                >
+                                    <FaRegTrashCan size={12} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </details>
     </div>;

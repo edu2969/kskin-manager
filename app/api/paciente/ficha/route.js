@@ -64,8 +64,6 @@ export async function GET(req) {
                     metodosAnticonceptivos:paciente_metodo_anticonceptivo (
                         id,
                         metodo_anticonceptivo_id,
-                        fecha_desde,
-                        fecha_hasta,
                         metodo:metodos_anticonceptivos (
                             nombre
                         )
@@ -151,8 +149,6 @@ export async function GET(req) {
                 metodosAnticonceptivos: ficha.paciente.metodosAnticonceptivos?.map((m) => ({
                     anticonceptivoId: m.id,
                     metodoAnticonceptivoId: m.metodo_anticonceptivo_id,
-                    fechaDesde: m.fecha_desde,
-                    fechaHasta: m.fecha_hasta,
                     nombreMetodo: m.metodo?.nombre
                 })) || [],
                 antecedentesAdicionales: ficha.paciente.antecedentes_adicionales || null,

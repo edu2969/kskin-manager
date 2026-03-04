@@ -133,16 +133,10 @@ export default function Ficha({ pacienteId, fichaId }: {
                 metodosAnticonceptivos: ficha.paciente?.metodosAnticonceptivos?.map((m: {
                     anticonceptivoId: string;
                     metodoAnticonceptivoId: number;
-                    fechaDesde: string;
-                    fechaHasta: string;
-                    nombreMetodo: string;
                 }) => ({
-                    anticonceptivoId: m.anticonceptivoId,
+                    anticonceptivoId: m.anticonceptivoId, // Este campo ya viene mapeado desde el backend
                     pacienteId: undefined, // No necesario en formulario
-                    metodoAnticonceptivoId: m.metodoAnticonceptivoId,
-                    fechaDesde: m.fechaDesde ? new Date(m.fechaDesde).toISOString().split('T')[0] : "",
-                    fechaHasta: m.fechaHasta ? new Date(m.fechaHasta).toISOString().split('T')[0] : "",
-                    nombreMetodo: m.nombreMetodo || ""
+                    metodoAnticonceptivoId: m.metodoAnticonceptivoId
                 })) || [],
                 medicamentos: ficha.paciente?.medicamentos?.map((m: {
                     nombre: string;
