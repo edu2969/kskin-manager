@@ -33,10 +33,9 @@ export default function Anticonceptivos({
         const nuevoAnticonceptivo: IAnticonceptivoForm = {
             anticonceptivoId: nuevoAnticonceptivoId,
             pacienteId: undefined, // Se agregará en el backend para nuevos anticonceptivos
-            metodoAnticonceptivoId: 0,
+            metodoAnticonceptivoId: -1, // Valor temporal para indicar "no seleccionado"
             fechaDesde: "",
-            fechaHasta: "",
-            nombreMetodo: ""
+            fechaHasta: ""
         };
         append(nuevoAnticonceptivo);
     };
@@ -52,9 +51,9 @@ export default function Anticonceptivos({
         const field = fields[index];
         console.log("Removiendo anticonceptivo:", index, "Field:", field); // Debug
         // Si el anticonceptivo tiene un ID real, eliminar de la base de datos
-        if (field.id && field.id !== undefined && !String(field.id).startsWith('new_')) {
-            console.log("Enviando comando de eliminación para:", field.id); // Debug
-            handleAutoSave(`paciente.anticonceptivo.delete.${field.id}`, 'true');
+        if (field.anticonceptivoId && field.anticonceptivoId !== undefined && !String(field.anticonceptivoId).startsWith('new_')) {
+            console.log("Enviando comando de eliminación para:", field.anticonceptivoId); // Debug
+            handleAutoSave(`paciente.anticonceptivo.delete.${field.anticonceptivoId}`, 'true');
         }
         // Remover del formulario
         remove(index);
@@ -89,25 +88,21 @@ export default function Anticonceptivos({
                         </thead>
                         <tbody>
                             {fields.map((field, index) => (
-                                <tr key={field.id}>
+                                <tr key={field.anticonceptivoId || field.id || index}>
                                     <td className="border border-[#d5c7aa] p-2 text-sm">
                                         <input 
                                             type="hidden" 
                                             {...register(`metodosAnticonceptivos.${index}.anticonceptivoId`)}
+                                            defaultValue={field.anticonceptivoId || ""}
                                         />
                                         <select
                                             {...register(`metodosAnticonceptivos.${index}.metodoAnticonceptivoId`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                            defaultValue={field.metodoAnticonceptivoId > 0 ? field.metodoAnticonceptivoId : ""}
                                             onChange={(e) => {
                                                 const selectedId = e.target.value;
-                                                const selectedMethod = metodosAnticonceptivos?.find((m: { id: number; }) => m.id === parseInt(selectedId));
-                                                handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.metodo_anticonceptivo_id`, selectedId);
-                                                // También guardar el nombre para mostrar
-                                                if (selectedMethod) {
-                                                    // Actualizar el campo nombreMetodo en el formulario
-                                                    register(`metodosAnticonceptivos.${index}.nombreMetodo`).onChange({
-                                                        target: { value: selectedMethod.nombre }
-                                                    });
+                                                if (selectedId && selectedId !== "0") {
+                                                    handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.metodo_anticonceptivo_id`, selectedId);
                                                 }
                                             }}
                                         >
@@ -118,16 +113,13 @@ export default function Anticonceptivos({
                                                 </option>
                                             ))}
                                         </select>
-                                        <input 
-                                            type="hidden" 
-                                            {...register(`metodosAnticonceptivos.${index}.nombreMetodo`)}
-                                        />
                                     </td>
                                     <td className="border border-[#d5c7aa] p-2 text-sm">
                                         <input
                                             type="date"
                                             {...register(`metodosAnticonceptivos.${index}.fechaDesde`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                            defaultValue={field.fechaDesde || ""}
                                             onBlur={(e) => handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.fecha_desde`, e.target.value)}
                                         />
                                     </td>
@@ -136,6 +128,7 @@ export default function Anticonceptivos({
                                             type="date"
                                             {...register(`metodosAnticonceptivos.${index}.fechaHasta`)}
                                             className="w-full border border-[#d5c7aa] rounded px-2 py-1 text-sm"
+                                            defaultValue={field.fechaHasta || ""}
                                             onBlur={(e) => handleAutoSave(`paciente.anticonceptivo.${field.anticonceptivoId}.fecha_hasta`, e.target.value)}
                                         />
                                     </td>

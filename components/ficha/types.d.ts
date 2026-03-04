@@ -7,12 +7,11 @@ export interface IPartoForm {
 }
 
 export interface IAnticonceptivoForm {
-    anticonceptivoId: string | null;
+    anticonceptivoId: string | number | null;
     pacienteId?: string;
     metodoAnticonceptivoId: number;
-    fechaDesde: string;
-    fechaHasta: string;
-    nombreMetodo?: string;
+    fechaDesde: string | null;
+    fechaHasta: string | null;
 }
 
 export interface IHigieneForm {
