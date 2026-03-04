@@ -60,6 +60,15 @@ export async function GET(req) {
                         fecha,
                         tipo,
                         genero
+                    ),
+                    metodosAnticonceptivos:paciente_metodo_anticonceptivo (
+                        id,
+                        metodo_anticonceptivo_id,
+                        fecha_desde,
+                        fecha_hasta,
+                        metodo:metodos_anticonceptivos (
+                            nombre
+                        )
                     ),                    
                     operaciones
                 ),
@@ -100,11 +109,8 @@ export async function GET(req) {
             .eq(filterField, filterValue)
             .order('created_at', { ascending: false })
             .limit(1)
-            .maybeSingle();
-            
-        console.log("[GET] /api/paciente/ficha - fichaId:", fichaId, "pacienteId:", pacienteId);
-        console.log("[GET] /api/paciente/ficha - Resultados de la consulta:", filterField, filterValue);
-
+            .maybeSingle();            
+        
         if (error) {
             console.log("ERROR fetching ficha:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
@@ -114,10 +120,6 @@ export async function GET(req) {
             return NextResponse.json({ error: 'Ficha not found' }, { status: 404 });
         }
 
-        console.log("Ficha encontrada:", ficha);
-        console.log("🔍 Partos desde DB:", ficha.paciente.partos);
-
-        // Transform the data to match the IFichaDetalle interface
         const fichaDetalle = {
             id: ficha.id,
             paciente: {
@@ -146,6 +148,13 @@ export async function GET(req) {
                     tipo: p.tipo,
                     genero: p.genero
                 })),
+                metodosAnticonceptivos: ficha.paciente.metodosAnticonceptivos?.map((m) => ({
+                    anticonceptivoId: m.id,
+                    metodoAnticonceptivoId: m.metodo_anticonceptivo_id,
+                    fechaDesde: m.fecha_desde,
+                    fechaHasta: m.fecha_hasta,
+                    nombreMetodo: m.metodo?.nombre
+                })) || [],
                 antecedentesAdicionales: ficha.paciente.antecedentes_adicionales || null,
             },
             profesional: {
@@ -175,8 +184,8 @@ export async function GET(req) {
         };
         
         return NextResponse.json(fichaDetalle);
-    } catch (err) {
-        console.error('Error fetching ficha:', err);
+    } catch(error) {
+        console.error("Error en GET /api/paciente/ficha:", error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

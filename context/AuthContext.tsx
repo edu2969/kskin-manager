@@ -224,15 +224,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     
     const initAuth = async () => {
       try {
-        console.log('Intentando recuperar la sesión de Supabase...');
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
           console.error('Error al recuperar la sesión:', error);
           return;
         }
-
-        console.log("Sessión recuperada:", session);
 
         if (mounted) {
           if (session?.user) {
@@ -262,13 +259,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Escuchar cambios de autenticación - solo para eventos importantes
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Cambio en el estado de autenticación:', event);
-      
       if (!mounted) return;
       
       // Esperar a que la inicialización termine para evitar race conditions
       if (!authInitialized) {
-        console.log('Auth aún inicializando, omitiendo onAuthStateChange');
         return;
       }
       

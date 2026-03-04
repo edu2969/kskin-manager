@@ -96,7 +96,8 @@ export default function Ficha({ pacienteId, fichaId }: {
             const data = await res.json();
             if (!res.ok) {
                 throw new Error(data.error || 'Error al cargar la ficha');
-            }            
+            }    
+            console.log("📡 Ficha obtenida:", data);        
             return data;
         }
     });
@@ -130,7 +131,20 @@ export default function Ficha({ pacienteId, fichaId }: {
                     otroMedicamento: "",
                     otroAntecedente: ficha.paciente?.antecedentesAdicionales || ""
                 },
-                metodosAnticonceptivos: ficha.paciente?.metodosAnticonceptivos || [],
+                metodosAnticonceptivos: ficha.paciente?.metodosAnticonceptivos?.map((m: {
+                    anticonceptivoId: string;
+                    metodoAnticonceptivoId: number;
+                    fechaDesde: string;
+                    fechaHasta: string;
+                    nombreMetodo: string;
+                }) => ({
+                    anticonceptivoId: m.anticonceptivoId,
+                    pacienteId: undefined, // No necesario en formulario
+                    metodoAnticonceptivoId: m.metodoAnticonceptivoId,
+                    fechaDesde: m.fechaDesde ? new Date(m.fechaDesde).toISOString().split('T')[0] : "",
+                    fechaHasta: m.fechaHasta ? new Date(m.fechaHasta).toISOString().split('T')[0] : "",
+                    nombreMetodo: m.nombreMetodo || ""
+                })) || [],
                 medicamentos: ficha.paciente?.medicamentos?.map((m: {
                     nombre: string;
                     unidades: string;
@@ -164,9 +178,6 @@ export default function Ficha({ pacienteId, fichaId }: {
             };
             
             reset(formData);
-            console.log("📝 Formulario cargado con valores por defecto:", formData);
-            console.log("👥 Partos cargados en formulario:", formData.partos);
-            console.log("🔑 IDs de partos mapeados:", formData.partos.map(p => ({ partoId: p.partoId, tipo: typeof p.partoId })));
         }
     }, [ficha, formMethods.reset]);
 

@@ -126,10 +126,12 @@ export async function POST(req) {
         const fichaUpdates = {};
         const higieneUpdates = {};
         const partosOperations = []; // Para operaciones de partos
+        const anticonceptivosOperations = []; // Para operaciones de anticonceptivos
 
         const pacienteFields = [
             'nombres', 'apellidos', 'numero_identidad', 'email', 'fecha_nacimiento', 'genero', 
-            'nombre_social', 'direccion', 'telefono', 'sistema_salud_id', 'alergias', 'operaciones'
+            'nombre_social', 'direccion', 'telefono', 'sistema_salud_id', 'alergias', 'operaciones',
+            'otro_anticonceptivo', 'otro_medicamento', 'otro_antecedente'
         ];
 
         const fichaFields = [
@@ -167,7 +169,57 @@ export async function POST(req) {
                 return; // Skip el procesamiento normal
             }
 
-            // Manejar campos de partos especialmente
+            // Manejar comando de eliminación de anticonceptivos
+            if (fieldPath.startsWith('paciente.anticonceptivo.delete.')) {
+                const match = fieldPath.match(/^paciente\.anticonceptivo\.delete\.([^\.]+)$/);
+                if (match) {
+                    const [, anticonceptivoId] = match;
+                    console.log("[actualizarFicha] Marcando anticonceptivo para eliminar:", anticonceptivoId);
+                    anticonceptivosOperations.push({
+                        type: 'delete',
+                        anticonceptivoId,
+                        paciente_id: pacienteId || fichaActual?.paciente_id
+                    });
+                }
+                return; // Skip el procesamiento normal
+            }
+
+            // Manejar campos de anticonceptivos especialmente
+            if (fieldPath.startsWith('paciente.anticonceptivo.')) {
+                const match = fieldPath.match(/^paciente\.anticonceptivo\.([^\.]+)\.(\w+)$/);
+                if (match) {
+                    const [, anticonceptivoId, campo] = match;
+                    console.log("[actualizarFicha] Procesando anticonceptivo:", anticonceptivoId, campo, value);
+                    
+                    // Solo procesar campos que existen en la tabla
+                    const camposValidos = ['metodo_anticonceptivo_id', 'fecha_desde', 'fecha_hasta'];
+                    if (!camposValidos.includes(campo)) {
+                        console.log("[actualizarFicha] Campo no válido:", campo);
+                        return; // Skip campos no válidos
+                    }
+                    
+                    // Preparar la operación de anticonceptivo
+                    let parsedValue = parseFieldValue(campo, value);
+                    
+                    // Para el campo metodo_anticonceptivo_id, convertir a entero
+                    if (campo === 'metodo_anticonceptivo_id') {
+                        parsedValue = parseInt(value, 10);
+                        if (isNaN(parsedValue) || parsedValue <= 0) {
+                            console.log("[actualizarFicha] ID de método anticonceptivo inválido:", value);
+                            return;
+                        }
+                    }
+                    
+                    anticonceptivosOperations.push({
+                        type: 'upsert',
+                        anticonceptivoId,
+                        field: campo,
+                        value: parsedValue,
+                        paciente_id: pacienteId || fichaActual?.paciente_id
+                    });
+                }
+                return; // Skip el procesamiento normal
+            }
             if (fieldPath.startsWith('paciente.parto.')) {
                 const match = fieldPath.match(/^paciente\.parto\.([^\.]+)\.(\w+)$/);
                 if (match) {
@@ -217,6 +269,7 @@ export async function POST(req) {
         });
 
         console.log("[actualizarFicha] Operaciones de partos después del forEach:", partosOperations);
+        console.log("[actualizarFicha] Operaciones de anticonceptivos después del forEach:", anticonceptivosOperations);
 
         const updatePromises = [];
 
@@ -283,6 +336,62 @@ export async function POST(req) {
                             .from("paciente_partos")
                             .update(partoData)
                             .eq("id", partoId)
+                    );
+                }
+            });
+        }
+
+        // Manejar operaciones de anticonceptivos
+        if (anticonceptivosOperations.length > 0) {
+            console.log("[actualizarFicha] Procesando operaciones de anticonceptivos:", anticonceptivosOperations);
+            
+            // Separar operaciones de eliminación y upsert
+            const deleteAnticonceptivos = anticonceptivosOperations.filter(op => op.type === 'delete');
+            const upsertAnticonceptivos = anticonceptivosOperations.filter(op => op.type === 'upsert');
+
+            // Ejecutar eliminaciones primero
+            deleteAnticonceptivos.forEach(op => {
+                if (!op.anticonceptivoId.startsWith('new_')) {
+                    console.log("[actualizarFicha] Eliminando anticonceptivo:", op.anticonceptivoId);
+                    updatePromises.push(
+                        supabase
+                            .from("paciente_metodo_anticonceptivo")
+                            .delete()
+                            .eq("id", op.anticonceptivoId)
+                    );
+                }
+            });
+
+            // Agrupar operaciones upsert por ID de anticonceptivo
+            const anticonceptivosGrouped = {};
+            upsertAnticonceptivos.forEach(op => {
+                if (!anticonceptivosGrouped[op.anticonceptivoId]) {
+                    anticonceptivosGrouped[op.anticonceptivoId] = {};
+                }
+                anticonceptivosGrouped[op.anticonceptivoId][op.field] = op.value;
+            });
+
+            console.log("[actualizarFicha] Anticonceptivos agrupados:", anticonceptivosGrouped);
+
+            // Ejecutar upserts para cada anticonceptivo
+            Object.entries(anticonceptivosGrouped).forEach(([anticonceptivoId, anticonceptivoData]) => {
+                if (anticonceptivoId.startsWith('new_')) {
+                    // Crear nuevo anticonceptivo - aquí SÍ incluir paciente_id
+                    const newAnticonceptivoData = { ...anticonceptivoData, paciente_id: pacienteId || fichaActual?.paciente_id };
+                    console.log("[actualizarFicha] Creando nuevo anticonceptivo:", newAnticonceptivoData);
+                    updatePromises.push(
+                        supabase
+                            .from("paciente_metodo_anticonceptivo")
+                            .insert(newAnticonceptivoData)
+                    );
+                } else {
+                    // Actualizar anticonceptivo existente por ID - NO incluir paciente_id
+                    console.log("[actualizarFicha] Actualizando anticonceptivo:", anticonceptivoId, anticonceptivoData);
+                    updatePromises.push(
+                        supabase
+                            .from("paciente_metodo_anticonceptivo")
+                            .update(anticonceptivoData)
+                            .eq("id", anticonceptivoId)
                     );
                 }
             });

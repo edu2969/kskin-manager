@@ -142,22 +142,17 @@ CREATE TABLE ficha_medicamentos (
 );
 
 CREATE TABLE metodos_anticonceptivos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id SMALLINT PRIMARY KEY DEFAULT nextval('metodos_anticonceptivos_id_seq'),
+    nombre VARCHAR(255) NOT NULL UNIQUE
 );
 
 -- Metodos Anticonceptivos table
-CREATE TABLE paciente_metodos_anticonceptivos (
+CREATE TABLE paciente_metodo_anticonceptivo (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     paciente_id UUID NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE,
-    fecha_inicio DATE,
-    fecha_fin DATE,
-    estado VARCHAR(50),
-    observaciones TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    metodo_anticonceptivo_id SMALLINT NOT NULL REFERENCES metodos_anticonceptivos(id),
+    fecha_desde DATE,
+    fecha_hasta DATE
 );
 
 -- Examenes table

@@ -6,6 +6,15 @@ export interface IPartoForm {
     tipo: string;
 }
 
+export interface IAnticonceptivoForm {
+    anticonceptivoId: string | null;
+    pacienteId?: string;
+    metodoAnticonceptivoId: number;
+    fechaDesde: string;
+    fechaHasta: string;
+    nombreMetodo?: string;
+}
+
 export interface IHigieneForm {
     cantidadCigarrillosSemanales: number;
     aguaConsumidaDiariaLitros: number;
@@ -37,7 +46,7 @@ export interface IFichaForm {
         otroMedicamento: string;
         otroAntecedente: string;
     };
-    metodosAnticonceptivos: string[];
+    metodosAnticonceptivos: IAnticonceptivoForm[];
     medicamentos: string[];
     antecedentes: string[];
     partos: IPartoForm[];

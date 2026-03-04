@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { UseFormRegister, useFieldArray, Control } from "react-hook-form";
 import { IFichaForm, IPartoForm } from "./types";
 import { FaRegTrashCan } from "react-icons/fa6";
@@ -19,16 +18,6 @@ export default function Partos({
         name: "partos"
     });
     
-    // ✅ NUEVO: Log cuando los fields cambian
-    useEffect(() => {
-        console.log("🔄 useFieldArray fields updated:", fields.map(f => ({ id: f.id, tipo: typeof f.id })));
-    }, [fields]);
-    
-    // ✅ NUEVO: Log cuando los fields cambian
-    useEffect(() => {
-        console.log("🔄 useFieldArray fields updated:", fields.map(f => ({ id: f.id, tipo: typeof f.id })));
-    }, [fields]);    
-
     const handleAgregarParto = () => {
         const nuevoPartoId = `new_${Date.now()}`; // ID único basado en timestamp
         const nuevoParto: IPartoForm = {
@@ -91,7 +80,6 @@ export default function Partos({
                             {fields
                                 .map((field, index) => ({ field, index }))
                                 .sort((a, b) => {
-                                    console.log(">>>", a.field, b.field);
                                     const fechaA = a.field.fecha || '';
                                     const fechaB = b.field.fecha || '';
                                     return fechaA.localeCompare(fechaB);

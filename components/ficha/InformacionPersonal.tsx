@@ -34,10 +34,6 @@ export default function InformacionPersonal({
         }
     });
 
-    useEffect(() => {
-        console.log("Es médico?", esMedico);
-    }, [esMedico]);
-
     // Observar el valor actual del sistema de salud en el formulario
     const sistemaSaludIdValue = useWatch({
         control,
@@ -185,7 +181,8 @@ export default function InformacionPersonal({
                 {/* Métodos Anticonceptivos - Solo para mujeres */}
                 {genero === 'F' && (<>
                     <Anticonceptivos 
-                        register={register}/>
+                        register={register}
+                        control={control} />
 
                     <Partos 
                         register={register} 
