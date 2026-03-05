@@ -69,7 +69,9 @@ export async function GET(req) {
                             nombre
                         )
                     ),                    
-                    operaciones
+                    operaciones,
+                    antecedentes_adicionales,
+                    ocupacion                
                 ),
                 profesional:profesionales (
                     id,                    
@@ -154,6 +156,7 @@ export async function GET(req) {
                     nombreMetodo: m.metodo?.nombre
                 })) || [],
                 antecedentesAdicionales: ficha.paciente.antecedentes_adicionales || null,
+                ocupacion: ficha.paciente.ocupacion || null
             },
             profesional: {
                 id: ficha.profesional.id,
@@ -178,6 +181,7 @@ export async function GET(req) {
             duracionTratamientoSemanas: ficha.duracion_tratamiento_semanas,
             examenes: ficha.examenes,
             anamnesis: ficha.anamnesis,
+            antecedentesAdicionales: ficha.antecedentes_adicionales,
             createdAt: ficha.created_at,
             finishedAt: ficha.finished_at,
         };

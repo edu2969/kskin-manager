@@ -27,7 +27,7 @@ export interface IFichaForm {
     receta: string;
     tratamiento: string;
     examenes: string;
-    motivoConsulta: string;
+    motivoConsulta: string;    
     paciente: {
         nombres: string;
         apellidos: string;
@@ -42,6 +42,8 @@ export interface IFichaForm {
         aplicaAlergias: boolean | null;
         medicamentos: string;
         operaciones: string,
+        antecedentesAdicionales: string;
+        ocupacion: string;
         otroAnticonceptivo: string;
         otroMedicamento: string;
         otroAntecedente: string;

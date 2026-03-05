@@ -24,6 +24,7 @@ import type { IFichaForm } from "./types";
 import { AutoSaveProvider } from "@/providers/AutoSaveProvider";
 import { AutoSaveIndicator } from "../prefabs/AutoSaveIndicator";
 import MotivoConsulta from "./MotivoConsulta";
+import { AntecedentesAdicionales } from "./AntecedentesAdicionales";
 
 const TABS_MEDICO = [
     { key: "personal", label: "Información personal", color: "pink" },
@@ -39,6 +40,7 @@ const TABS_OTROS = [
     { key: "personal", label: "Información personal", color: "pink" },
     { key: "motivo", label: "Motivo de Consulta", color: "purple" },
     { key: "anamnesis", label: "Anamnesis / Exámen Físico", color: "purple" },
+    { key: "antecedentes_adicionales", label: "Antecedentes adicionales", color: "purple" },
     { key: "indicaciones", label: "Indicaciones", color: "sky" },
 ];
 
@@ -53,7 +55,7 @@ export default function Ficha({ pacienteId, fichaId }: {
             receta: "",
             tratamiento: "",
             motivoConsulta: "",
-            examenes: "",
+            examenes: "",            
             paciente: {
                 nombres: "",
                 apellidos: "",
@@ -67,6 +69,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                 alergias: "",
                 medicamentos: "",
                 operaciones: "",
+                antecedentesAdicionales: "",
                 otroAnticonceptivo: "",
                 otroMedicamento: "",
                 otroAntecedente: ""
@@ -114,7 +117,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                 anamnesis: ficha.anamnesis || "",
                 receta: ficha.receta || "",
                 tratamiento: ficha.tratamiento || "",
-                motivoConsulta: ficha.motivoConsulta || "",
+                motivoConsulta: ficha.motivoConsulta || "",                
                 examenes: ficha.examenes || "",
                 paciente: {
                     nombres: ficha.paciente?.nombres || "",
@@ -132,6 +135,8 @@ export default function Ficha({ pacienteId, fichaId }: {
                     alergias: ficha.paciente.alergias,
                     medicamentos: "",
                     operaciones: ficha.paciente?.operaciones || "",
+                    antecedentesAdicionales: ficha.paciente?.antecedentesAdicionales || "",
+                    ocupacion: ficha.paciente?.ocupacion || "",
                     otroAnticonceptivo: "",
                     otroMedicamento: "",
                     otroAntecedente: ficha.paciente?.antecedentesAdicionales || ""
@@ -292,6 +297,10 @@ export default function Ficha({ pacienteId, fichaId }: {
                         {tab === "anamnesis" && <Anamnesis
                                 register={register}
                             />}
+
+                        {tab === "antecedentes_adicionales" && <AntecedentesAdicionales
+                            register={register}
+                        />}
 
                         {tab === "examenes" && <Examenes
                                 register={register}

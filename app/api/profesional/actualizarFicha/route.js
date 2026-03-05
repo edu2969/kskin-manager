@@ -132,8 +132,9 @@ export async function POST(req) {
 
         const pacienteFields = [
             'nombres', 'apellidos', 'numero_identidad', 'email', 'fecha_nacimiento', 'genero', 
-            'nombre_social', 'direccion', 'telefono', 'sistema_salud_id', 'alergias', 'operaciones',
-            'otro_anticonceptivo', 'otro_medicamento', 'otro_antecedente'
+            'nombre_social', 'direccion', 'telefono', 'sistema_salud_id', 'aplica_alergias', 'alergias', 
+            'operaciones', 'otro_anticonceptivo', 'otro_medicamento', 'otro_antecedente', 
+            'antecedentes_adicionales', 'ocupacion'
         ];
 
         const fichaFields = [

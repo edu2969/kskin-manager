@@ -174,6 +174,18 @@ export default function InformacionPersonal({
                 onBlur={(e) => handleAutoSave("paciente.alergias", e.target.value)}
             />
         </div>
+        <div>
+            <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                Ocupación
+            </label>
+            <textarea
+                className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                {...register("paciente.ocupacion")}
+                placeholder="Describa la ocupación del paciente..."
+                rows={2}
+                onBlur={(e) => handleAutoSave("paciente.ocupacion", e.target.value)}
+            />
+        </div>
 
         {!esMedico && (
             <div className="space-y-6">
