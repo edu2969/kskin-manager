@@ -21,6 +21,8 @@ export interface IFichaDetalle {
         aplicaAlergias: boolean;
         alergias: string;
         antecedentes: string[];
+        ocupacion: string | null;
+        antecedentesAdicionales: string | null;
         medicamentos: {
             nombre: string;
             unidades: string;
@@ -51,9 +53,10 @@ export interface IFichaDetalle {
         habitoAlimenticio: string;
     };
     fecha: Date;
+    motivoConsulta: string;
+    examenes: string;
     tratamiento: string;
     duracionTratamientoSemanas: number;
-    examenes: string;
     createdAt: Date;    
     anamnesis: string | null;
     finishedAt: Date;

@@ -150,15 +150,28 @@ export default function InformacionPersonal({
                 autoSaveAsNumber={true}
                 isLoading={isLoading} />            
         </div>
-        <div>
-            <label className="block text-sm font-semibold text-[#68563c] mb-1">
-                Email
-            </label>
-            <input
-                className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
-                {...register("paciente.email")}
-                onBlur={(e) => handleAutoSave("paciente.email", e.target.value)}
-            />
+        <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                    Email
+                </label>
+                <input
+                    className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                    {...register("paciente.email")}
+                    onBlur={(e) => handleAutoSave("paciente.email", e.target.value)}
+                />
+            </div>
+            <div>
+                <label className="block text-sm font-semibold text-[#68563c] mb-1">
+                    Fecha de Nacimiento
+                </label>
+                <input
+                    type="date"
+                    className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                    {...register("paciente.fechaNacimiento")}
+                    onBlur={(e) => handleAutoSave("paciente.fecha_nacimiento", e.target.value)}
+                />
+            </div>
         </div>
         <div>
             <label className="block text-sm font-semibold text-[#68563c] mb-1">

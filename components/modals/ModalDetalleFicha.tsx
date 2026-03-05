@@ -113,14 +113,14 @@ export function ModalDetalleFicha({
                                     {ficha.paciente.fechaNacimiento && (
                                         <p><strong>Edad:</strong> {calcularEdad(ficha.paciente.fechaNacimiento)} años</p>
                                     )}
-                                </div>
-                                <div>                                    
+                                    {ficha.paciente.ocupacion !== null && <p><strong>Ocupación:</strong> {ficha.paciente.ocupacion}</p>}
+                                    {ficha.paciente.antecedentesAdicionales !== null && <p><strong>Antecedentes Adicionales:</strong> {ficha.paciente.antecedentesAdicionales}</p>}
                                     {ficha.paciente.sistemaSalud && (
                                         <p><strong>Sistema de Salud:</strong> {ficha.paciente.sistemaSalud}</p>
                                     )}
                                 </div>
-                                {ficha.paciente.aplicaAlergias && (<div>
-                                    <p><strong>Alergias:</strong> {ficha.paciente.alergias}</p>
+                                {ficha.paciente.alergias !== null && (<div>
+                                    <p className="text-red-600"><strong>Alergias:</strong> {ficha.paciente.alergias}</p>
                                 </div>)}
                             </div>
                         </div>
@@ -142,6 +142,19 @@ export function ModalDetalleFicha({
                                 </div>
                             )}
                         </div>
+
+                        {/* Motivo de consulta */}
+                        {ficha.motivoConsulta && <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-2 md:p-5">
+                            <h3 className="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
+                                🩺 Motivo de consulta
+                            </h3>
+                            <div className="space-y-2">
+                                {ficha.motivoConsulta &&
+                                    <div className="bg-white px-3 py-2 rounded-lg text-gray-700">
+                                        • {ficha.motivoConsulta}
+                                    </div>}
+                            </div>
+                        </div>}
 
                         {/* Antecedentes del Paciente */}
                         {(ficha.paciente.antecedentes?.length > 0) && (
@@ -181,7 +194,7 @@ export function ModalDetalleFicha({
                         )}
 
                         {/* Información de Higiene */}
-                        {ficha.higiene && (
+                        {ficha.higiene && Object.keys(ficha.higiene).length > 0 && (
                             <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-2 md:p-5">
                                 <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
                                     🌿 Hábitos e Higiene
@@ -283,19 +296,6 @@ export function ModalDetalleFicha({
                             </div>
                         )}
 
-                        {/* Tratamientos */}
-                        <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-2 md:p-5">
-                            <h3 className="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
-                                🩹 Tratamiento
-                            </h3>
-                            <div className="space-y-2">
-                                {ficha.tratamiento &&
-                                    <div className="bg-white px-3 py-2 rounded-lg text-gray-700">
-                                        • {ficha.tratamiento}
-                                    </div>}
-                            </div>
-                        </div>
-
                         {/* Anamnesis */}
                         {ficha.anamnesis && <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-2 md:p-5">
                             <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
@@ -308,6 +308,19 @@ export function ModalDetalleFicha({
                                     </div>}
                             </div>
                         </div>}
+
+                        {/* Tratamientos */}
+                        <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-2 md:p-5">
+                            <h3 className="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
+                                🩹 Tratamiento
+                            </h3>
+                            <div className="space-y-2">
+                                {ficha.tratamiento &&
+                                    <div className="bg-white px-3 py-2 rounded-lg text-gray-700">
+                                        • {ficha.tratamiento}
+                                    </div>}
+                            </div>
+                        </div>
 
                         {user && ficha && user.id === ficha.profesional.usuarioId && (
                             <div className="flex justify-end mt-6">                                

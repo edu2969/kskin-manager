@@ -12,6 +12,7 @@ import { USER_ROLE } from "@/app/utils/constants";
 import toast from "react-hot-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthorization } from "@/lib/auth/useAuthorization";
+import { signOut } from "@/services/auth-service";
 
 export default function Panoramica() {
     const [pacienteSeleccionado, setPacienteSeleccionado] = useState<IPaciente | null>(null);
@@ -112,6 +113,7 @@ export default function Panoramica() {
                 className="fixed bottom-2 right-2 md:bottom-6 md:right-6 z-50 bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center "
                 title="CiPower"
                 onClick={async () => {
+                    await signOut(); 
                     router.push('/logout');
                 }}>
                 {/* SVG CiPower logo (placeholder) */}

@@ -38,8 +38,7 @@ export interface IFichaForm {
         email: string;
         direccion: string;
         fechaNacimiento: string;
-        alergias: string;
-        aplicaAlergias: boolean | null;
+        alergias: string | null;
         medicamentos: string;
         operaciones: string,
         antecedentesAdicionales: string;

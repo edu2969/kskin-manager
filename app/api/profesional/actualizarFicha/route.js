@@ -139,7 +139,7 @@ export async function POST(req) {
 
         const fichaFields = [
             'anamnesis', 'tratamiento', 'motivo_consulta', 
-            'examenes', 'receta', 'duracion_tratamiento_semanas'            
+            'receta', 'duracion_tratamiento_semanas'            
         ];
 
         const higieneFields = [

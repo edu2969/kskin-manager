@@ -46,7 +46,7 @@ export default function Boxes({
             <div
                 key={`box_${idx}`}
                 className={`relative rounded-xl shadow-lg flex flex-col items-center justify-center h-28 md:h-40 transition-all
-                            ${boxLibre(box) ? "text-[#66754c] bg-[#f6eedb] border-2 border-dashed border-[#d5c7aa]" : "text-white bg-[#8c966d] border-2 border-[#d5c7aa]"}
+                            ${boxLibre(box) ? "text-[#66754c] bg-[#f6eedb] border-2 border-[#d5c7aa]" : "text-white bg-[#8c966d] border-2 border-[#d5c7aa]"}
                             ${pacienteSeleccionado && boxLibre(box) ? "ring-2 ring-pink-300" : ""}
                             ${boxSeleccionado?.id === box.id ? "bg-pink-300 text-pink-800" : ""}
                         `}

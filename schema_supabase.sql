@@ -55,6 +55,7 @@ CREATE TABLE pacientes (
     numero_identidad VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255),
     fecha_nacimiento DATE,
+    ocupacion TEXT,
     genero VARCHAR(20),
     nombre_social VARCHAR(64),
     grupo_sanguineo VARCHAR(10),
@@ -77,6 +78,8 @@ CREATE TABLE fichas (
     duracion_tratamiento_semanas SMALLINT,
     examenes TEXT,
     antecedentes_adicionales TEXT,
+    motivo_consulta TEXT,
+    anamnesis TEXT,    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMP DEFAULT NULL
@@ -153,12 +156,6 @@ CREATE TABLE paciente_metodo_anticonceptivo (
     metodo_anticonceptivo_id SMALLINT NOT NULL REFERENCES metodos_anticonceptivos(id)
 );
 
--- Examenes table
-CREATE TABLE ficha_examenes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo TEXT NOT NULL    
-);
-
 -- Arribox table
 CREATE TABLE arribos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -172,8 +169,6 @@ CREATE TABLE arribos (
 -- Boxes (Consultorios) table
 CREATE TABLE boxes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    numero INT NOT NULL UNIQUE,
-    ocupado BOOLEAN DEFAULT false,
     paciente_id UUID REFERENCES pacientes(id) ON DELETE SET NULL,
     profesional_id UUID REFERENCES profesionales(id) ON DELETE SET NULL,
     inicio_atencion TIMESTAMP NULL,

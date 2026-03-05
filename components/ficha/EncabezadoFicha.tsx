@@ -34,7 +34,7 @@ export default function EncabezadoFicha({
                     <div className="text-sm text-[#66754c]">
                         {paciente?.numeroIdentidad}
                         {paciente?.fechaNacimiento
-                            ? ` • ${new Date(
+                            ? ` • Fecha de nacimiento: ${new Date(
                                 paciente.fechaNacimiento
                             ).toLocaleDateString()}`
                             : ""}

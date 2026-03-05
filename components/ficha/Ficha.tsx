@@ -131,7 +131,6 @@ export default function Ficha({ pacienteId, fichaId }: {
                     fechaNacimiento: ficha.paciente?.fechaNacimiento 
                         ? new Date(ficha.paciente.fechaNacimiento).toISOString().split('T')[0] 
                         : "",
-                    aplicaAlergias: ficha.paciente.aplicaAlergias,
                     alergias: ficha.paciente.alergias,
                     medicamentos: "",
                     operaciones: ficha.paciente?.operaciones || "",
@@ -182,10 +181,9 @@ export default function Ficha({ pacienteId, fichaId }: {
                 }
             };
             
-            reset(formData);
+            reset(formData);            
             
-            // Mostrar alerta si aplicaAlergias es null
-            if (ficha.paciente?.aplicaAlergias === null) {
+            if (ficha.paciente?.alergias === null) {
                 setShowAlertaAlergias(true);
             }
         }
@@ -241,7 +239,7 @@ export default function Ficha({ pacienteId, fichaId }: {
 
     const handleTerminarAtencion = async () => {
         if(pacienteId) {
-            mutationTerminarAtencion.mutate();
+            setShowModalSalir(true);
             return;
         }
         router.back();
@@ -289,7 +287,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 control={control}
                                 genero={ficha?.paciente?.genero || ""}
                                 esMedico={esMedico()}
-                                alertaAlergias={ficha?.paciente?.aplicaAlergias === null} />}
+                                alertaAlergias={ficha?.paciente?.alergias === null} />}
 
                         {tab === "motivo" && <MotivoConsulta 
                             register={register} />}
@@ -435,7 +433,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                     className="bg-white shadow-lg rounded-full p-4 border border-gray-200 hover:bg-pink-100 transition flex items-center justify-center"
                     onMouseEnter={() => setShowTooltip(true)}
                     onMouseLeave={() => setShowTooltip(false)}
-                    onClick={() => setShowModalSalir(true)}
+                    onClick={() => handleTerminarAtencion()}
                 >
                     {/* SVG CiPower logo (placeholder) */}
                     <CiPower className="text-3xl text-[#68563c]" />

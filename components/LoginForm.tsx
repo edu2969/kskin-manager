@@ -72,7 +72,7 @@ export default function LoginForm() {
         {/* Logo superior */}
         <div className="mb-8 flex">          
             <Image width={240} height={120} src="/brand-green-kskin.png" alt="KSKIN-Brand" className="h-32 w-auto filter brightness-0 invert" priority={true} />          
-            <span className="text-white opacity-40 text-xs">v0.9</span>
+            <span className="text-white opacity-40 text-xs">v1.0</span>
         </div>
         
         {/* Tarjeta de login */}
