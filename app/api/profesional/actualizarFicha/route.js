@@ -64,6 +64,14 @@ function parseFieldValue(fieldName, value) {
     }
 }
 
+function normalizeMedicationName(value) {
+    if (typeof value !== "string") {
+        return "";
+    }
+
+    return value.trim().replace(/\s+/g, " ");
+}
+
 export async function POST(req) {
     try {
         console.log("[actualizarFicha] Iniciando petición");
@@ -100,7 +108,7 @@ export async function POST(req) {
         if (fichaId) {
             const { data: ficha } = await supabase
                 .from("fichas")
-                .select("id, higiene_id, paciente_id")
+                .select("id, paciente_id, higiene_id")
                 .eq("id", fichaId)
                 .single();
             fichaActual = ficha;
@@ -113,7 +121,7 @@ export async function POST(req) {
 
             const { data: ficha } = await supabase
                 .from("fichas")
-                .select("id, higiene_id, paciente_id")
+                .select("id, paciente_id, higiene_id")
                 .eq("paciente_id", pacienteId)
                 .gte("created_at", hoy.toISOString())
                 .lt("created_at", manana.toISOString())
@@ -129,6 +137,7 @@ export async function POST(req) {
         const higieneUpdates = {};
         const partosOperations = []; // Para operaciones de partos
         const anticonceptivosOperations = []; // Para operaciones de anticonceptivos
+        const medicamentosOperations = []; // Para operaciones de ficha_medicamentos
 
         const pacienteFields = [
             'nombres', 'apellidos', 'numero_identidad', 'email', 'fecha_nacimiento', 'genero', 
@@ -189,6 +198,65 @@ export async function POST(req) {
                     }
                 }
                 return; // Skip el procesamiento normal
+            }
+
+            // Manejar comando de eliminación de medicamentos de ficha
+            if (fieldPath.startsWith('ficha.medicamento.delete.')) {
+                const match = fieldPath.match(/^ficha\.medicamento\.delete\.([^\.]+)$/);
+                if (match) {
+                    const [, medicamentoId] = match;
+                    console.log("[actualizarFicha] Marcando medicamento para eliminar:", medicamentoId);
+                    medicamentosOperations.push({
+                        type: 'delete',
+                        medicamentoId
+                    });
+                }
+                return;
+            }
+
+            // Manejar campos de medicamentos de ficha
+            if (fieldPath.startsWith('ficha.medicamento.')) {
+                const match = fieldPath.match(/^ficha\.medicamento\.([^\.]+)\.(\w+)$/);
+                if (match) {
+                    const [, medicamentoTempId, campo] = match;
+                    console.log("[actualizarFicha] Procesando medicamento:", medicamentoTempId, campo, value);
+
+                    const camposValidos = ['medicamento_id', 'dosis_prescrita', 'frecuencia', 'duracion'];
+                    if (!camposValidos.includes(campo)) {
+                        console.log("[actualizarFicha] Campo de medicamento no válido:", campo);
+                        return;
+                    }
+
+                    let parsedValue = parseFieldValue(campo, value);
+                    if (campo === 'medicamento_id' && typeof value === 'string') {
+                        parsedValue = value.trim();
+                        if (!parsedValue) {
+                            return;
+                        }
+                    }
+
+                    medicamentosOperations.push({
+                        type: 'upsert',
+                        medicamentoTempId,
+                        field: campo,
+                        value: parsedValue
+                    });
+                }
+                return;
+            }
+
+            // Compatibilidad con input legado de medicamentos como texto libre
+            if (fieldPath === 'paciente.medicamentos') {
+                const medicationNames = String(value || '')
+                    .split(/[\n,;]/)
+                    .map(normalizeMedicationName)
+                    .filter(Boolean);
+
+                medicamentosOperations.push({
+                    type: 'sync_text',
+                    medicationNames
+                });
+                return;
             }
 
             // Manejar campos de anticonceptivos especialmente
@@ -277,6 +345,7 @@ export async function POST(req) {
 
         console.log("[actualizarFicha] Operaciones de partos después del forEach:", partosOperations);
         console.log("[actualizarFicha] Operaciones de anticonceptivos después del forEach:", anticonceptivosOperations);
+        console.log("[actualizarFicha] Operaciones de medicamentos después del forEach:", medicamentosOperations);
 
         const updatePromises = [];
 
@@ -290,6 +359,141 @@ export async function POST(req) {
                     .update(pacienteUpdates)
                     .eq("id", pacienteId || fichaActual?.paciente_id)
             );
+        }
+
+        // Manejar operaciones de medicamentos por relación ficha_medicamentos
+        if (medicamentosOperations.length > 0 && fichaActual?.id) {
+            console.log("[actualizarFicha] Procesando operaciones de medicamentos:", medicamentosOperations);
+
+            const deleteMedicamentos = medicamentosOperations.filter(op => op.type === 'delete');
+            const upsertMedicamentos = medicamentosOperations.filter(op => op.type === 'upsert');
+            const syncTextOperation = medicamentosOperations.find(op => op.type === 'sync_text');
+
+            deleteMedicamentos.forEach(op => {
+                if (!op.medicamentoId.startsWith('new_')) {
+                    updatePromises.push(
+                        supabase
+                            .from('ficha_medicamentos')
+                            .delete()
+                            .eq('ficha_id', fichaActual.id)
+                            .eq('medicamento_id', op.medicamentoId)
+                    );
+                }
+            });
+
+            if (upsertMedicamentos.length > 0) {
+                const grouped = {};
+
+                upsertMedicamentos.forEach(op => {
+                    if (!grouped[op.medicamentoTempId]) {
+                        grouped[op.medicamentoTempId] = {};
+                    }
+                    grouped[op.medicamentoTempId][op.field] = op.value;
+                });
+
+                Object.values(grouped).forEach((medData) => {
+                    if (!medData.medicamento_id) {
+                        return;
+                    }
+
+                    updatePromises.push(
+                        supabase
+                            .from('ficha_medicamentos')
+                            .upsert({
+                                ficha_id: fichaActual.id,
+                                medicamento_id: medData.medicamento_id,
+                                dosis_prescrita: medData.dosis_prescrita || null,
+                                frecuencia: medData.frecuencia || null,
+                                duracion: medData.duracion || null
+                            }, {
+                                onConflict: 'ficha_id,medicamento_id'
+                            })
+                    );
+                });
+            }
+
+            // Soporte de compatibilidad para payload legado basado en texto libre
+            if (syncTextOperation && Array.isArray(syncTextOperation.medicationNames)) {
+                const uniqueNames = [...new Set(syncTextOperation.medicationNames.map(normalizeMedicationName).filter(Boolean))];
+
+                const { data: existingLinks, error: existingLinksError } = await supabase
+                    .from('ficha_medicamentos')
+                    .select('medicamento_id')
+                    .eq('ficha_id', fichaActual.id);
+
+                if (existingLinksError) {
+                    return NextResponse.json({
+                        error: 'Error obteniendo medicamentos actuales de la ficha',
+                        details: [existingLinksError.message]
+                    }, { status: 500 });
+                }
+
+                let targetMedicationIds = [];
+
+                if (uniqueNames.length > 0) {
+                    const { data: existingMeds, error: existingMedsError } = await supabase
+                        .from('medicamentos')
+                        .select('id, nombre')
+                        .in('nombre', uniqueNames);
+
+                    if (existingMedsError) {
+                        return NextResponse.json({
+                            error: 'Error obteniendo medicamentos por nombre',
+                            details: [existingMedsError.message]
+                        }, { status: 500 });
+                    }
+
+                    const existingByName = new Map((existingMeds || []).map((m) => [normalizeMedicationName(m.nombre), m.id]));
+                    const missingNames = uniqueNames.filter((name) => !existingByName.has(name));
+
+                    if (missingNames.length > 0) {
+                        const { data: insertedMeds, error: insertMedsError } = await supabase
+                            .from('medicamentos')
+                            .insert(missingNames.map((nombre) => ({ nombre })))
+                            .select('id, nombre');
+
+                        if (insertMedsError) {
+                            return NextResponse.json({
+                                error: 'Error creando medicamentos faltantes',
+                                details: [insertMedsError.message]
+                            }, { status: 500 });
+                        }
+
+                        (insertedMeds || []).forEach((m) => {
+                            existingByName.set(normalizeMedicationName(m.nombre), m.id);
+                        });
+                    }
+
+                    targetMedicationIds = uniqueNames
+                        .map((name) => existingByName.get(name))
+                        .filter(Boolean);
+                }
+
+                const currentMedicationIds = (existingLinks || []).map((row) => row.medicamento_id);
+                const toDelete = currentMedicationIds.filter((id) => !targetMedicationIds.includes(id));
+                const toInsert = targetMedicationIds.filter((id) => !currentMedicationIds.includes(id));
+
+                if (toDelete.length > 0) {
+                    updatePromises.push(
+                        supabase
+                            .from('ficha_medicamentos')
+                            .delete()
+                            .eq('ficha_id', fichaActual.id)
+                            .in('medicamento_id', toDelete)
+                    );
+                }
+
+                if (toInsert.length > 0) {
+                    updatePromises.push(
+                        supabase
+                            .from('ficha_medicamentos')
+                            .insert(toInsert.map((medicamento_id) => ({
+                                ficha_id: fichaActual.id,
+                                medicamento_id
+                            })))
+                    );
+                }
+            }
         }
 
         // Manejar operaciones de partos
@@ -418,21 +622,34 @@ export async function POST(req) {
             );
         }
 
-        if (Object.keys(higieneUpdates).length > 0 && fichaActual) {
+        if (Object.keys(higieneUpdates).length > 0 && fichaActual?.id) {
+            // Relación confirmada: fichas.higiene_id -> higienes.id (nullable)
             if (fichaActual.higiene_id) {
-                // Actualizar higiene existente
                 updatePromises.push(
                     supabase
-                        .from("ficha_higiene")
+                        .from("higienes")
                         .update({ ...higieneUpdates })
-                        .eq("ficha_id", fichaActual.id)
+                        .eq("id", fichaActual.higiene_id)
                 );
             } else {
-                // Crear nueva entrada de higiene y asociarla a la ficha
+                const { data: nuevaHigiene, error: insertHigieneError } = await supabase
+                    .from("higienes")
+                    .insert({ ...higieneUpdates })
+                    .select("id")
+                    .single();
+
+                if (insertHigieneError || !nuevaHigiene?.id) {
+                    return NextResponse.json({
+                        error: "Error creando higiene",
+                        details: [insertHigieneError?.message || "No se pudo crear el registro de higiene"]
+                    }, { status: 500 });
+                }
+
                 updatePromises.push(
                     supabase
-                        .from("ficha_higiene")
-                        .insert({ ...higieneUpdates, ficha_id: fichaActual.id })
+                        .from("fichas")
+                        .update({ higiene_id: nuevaHigiene.id })
+                        .eq("id", fichaActual.id)
                 );
             }
         }

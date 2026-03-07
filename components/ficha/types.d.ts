@@ -12,6 +12,14 @@ export interface IAnticonceptivoForm {
     metodoAnticonceptivoId: number;
 }
 
+export interface IMedicamentoForm {
+    relacionId: string | null;
+    medicamentoId: string;
+    dosisPrescrita?: string;
+    frecuencia?: string;
+    duracion?: string;
+}
+
 export interface IHigieneForm {
     cantidadCigarrillosSemanales: number;    
     ipa: number;
@@ -48,7 +56,7 @@ export interface IFichaForm {
         otroAntecedente: string;
     };
     metodosAnticonceptivos: IAnticonceptivoForm[];
-    medicamentos: string[];
+    medicamentos: IMedicamentoForm[];
     antecedentes: string[];
     partos: IPartoForm[];
     higiene: IHigieneForm;

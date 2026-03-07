@@ -184,6 +184,7 @@ export default function InformacionPersonal({
                         : 'border-[#d5c7aa] focus:border-[#ac9164]'
                     }`}
                 {...register("paciente.alergias")}
+                placeholder={`Escriba las alergias aquí. De no aplicar, escriba "No aplica"`}
                 onBlur={(e) => handleAutoSave("paciente.alergias", e.target.value)}
             />
         </div>
@@ -202,7 +203,7 @@ export default function InformacionPersonal({
 
         {!esMedico && (
             <div className="space-y-6">
-                <Medicamentos register={register} />
+                <Medicamentos register={register} control={control} />
 
                 <Operaciones register={register} />
 

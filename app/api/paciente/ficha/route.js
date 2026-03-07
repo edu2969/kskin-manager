@@ -86,10 +86,13 @@ export async function GET(req) {
                         )
                     )
                 ),        
-                medicamentos:ficha_medicamentos (
+                medicamentos:ficha_medicamentos (                    
+                    id,
                     medicamento_id,
-                    dosis_prescrita,
-                    frecuencia
+                    medicamento:medicamentos (
+                        id,
+                        nombre
+                    )
                 ),
                 higiene:higienes (
                     cantidad_cigarrillos_semanales,
@@ -138,10 +141,10 @@ export async function GET(req) {
                 aplicaAlergias: ficha.paciente.aplica_alergias,
                 alergias: ficha.paciente.alergias,
                 antecedentes: ficha.paciente.antecedentes?.map((a) => a.detalles),
-                medicamentos: ficha.paciente.medicamentos?.map((m) => ({
-                    nombre: m.nombre, // Replace with actual name if available
-                    unidades: m.dosis_prescrita,
-                    frecuencia: m.frecuencia,
+                medicamentos: (ficha.medicamentos || []).map((m) => ({
+                    relacionId: m.id,
+                    medicamentoId: m.medicamento_id,
+                    nombre: m.medicamento?.nombre || null                    
                 })),
                 operaciones: ficha.paciente.operaciones,
                 partos: ficha.paciente.partos.map((p) => ({

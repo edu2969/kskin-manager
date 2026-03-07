@@ -79,7 +79,8 @@ CREATE TABLE fichas (
     examenes TEXT,
     antecedentes_adicionales TEXT,
     motivo_consulta TEXT,
-    anamnesis TEXT,    
+    anamnesis TEXT,
+    higiene_id UUID REFERENCES higienes(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMP DEFAULT NULL
@@ -112,9 +113,8 @@ CREATE TABLE paciente_partos (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ficha_higiene (
+CREATE TABLE higienes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    ficha_id UUID NOT NULL REFERENCES fichas(id) ON DELETE CASCADE,
     cantidad_cigarrillos_semanales NUMERIC DEFAULT 0,
     agua_consumida_diaria_litros NUMERIC DEFAULT 0,
     horas_ejercicio_semanales NUMERIC DEFAULT 0,

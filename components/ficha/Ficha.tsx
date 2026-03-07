@@ -148,15 +148,14 @@ export default function Ficha({ pacienteId, fichaId }: {
                     pacienteId: undefined, // No necesario en formulario
                     metodoAnticonceptivoId: m.metodoAnticonceptivoId
                 })) || [],
-                medicamentos: ficha.paciente?.medicamentos?.map((m: {
-                    nombre: string;
-                    unidades: string;
-                    frecuencia: string;
+                medicamentos: (ficha.medicamentos || ficha.paciente?.medicamentos || []).map((m: {
+                    relacionId?: string;
+                    medicamentoId?: string;
+                    medicamento_id?: string;
                 }) => ({
-                    nombre: m.nombre,
-                    unidades: m.unidades,
-                    frecuencia: m.frecuencia
-                })) || [],
+                    relacionId: m.relacionId || m.medicamentoId || m.medicamento_id || null,
+                    medicamentoId: m.medicamentoId || m.medicamento_id || ""
+                })).filter((m: { medicamentoId: string }) => Boolean(m.medicamentoId)),
                 antecedentes: ficha.paciente?.antecedentes || [],
                 partos: ficha.paciente?.partos?.map((p: {
                     partoId: string;
@@ -234,6 +233,9 @@ export default function Ficha({ pacienteId, fichaId }: {
                 throw new Error(data.error || 'Error al terminar la atención');
             }
             return data;
+        },
+        onSuccess: () => {
+            router.back();
         }
     });
 
@@ -243,6 +245,10 @@ export default function Ficha({ pacienteId, fichaId }: {
             return;
         }
         router.back();
+    }
+
+    const handleRegistrarTerminoAtencion = async () => {
+        mutationTerminarAtencion.mutate();        
     }
 
     return (<AutoSaveProvider 
@@ -443,7 +449,7 @@ export default function Ficha({ pacienteId, fichaId }: {
             <ModalConfirmacionSalir
                 isOpen={showModalSalir}
                 onClose={() => setShowModalSalir(false)}
-                terminarAtencion={handleTerminarAtencion}
+                terminarAtencion={handleRegistrarTerminoAtencion}
             />
             
             <ModalAlertaAlergias

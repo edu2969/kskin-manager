@@ -14,20 +14,9 @@ interface LoginFormData {
 export default function LoginForm() {
   const router = useRouter();
   const onError = (errors: FieldErrors<LoginFormData>, e?: React.BaseSyntheticEvent) => console.log(errors, e);
-  const [resolution, setResolution] = useState({ width: 0, height: 0 });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [redirecting, setRedirecting] = useState(false);  
-  
+  const [redirecting, setRedirecting] = useState(false);
   const supabase = createSupabaseBrowserClient();
-
-  useEffect(() => {
-    const updateResolution = () => {
-      setResolution({ width: window.innerWidth, height: window.innerHeight });
-    };
-    updateResolution();
-    window.addEventListener("resize", updateResolution);
-    return () => window.removeEventListener("resize", updateResolution);
-  }, []);
 
   const {
     register,
@@ -35,15 +24,15 @@ export default function LoginForm() {
       errors
     },
     handleSubmit,
-  } = useForm<LoginFormData>();  
+  } = useForm<LoginFormData>();
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoggingIn(true);
-    
+
     try {
       console.log('Intentando login con:', data.email);
       const { error } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-      if(!error) {
+      if (!error) {
         console.log('Login exitoso, redirigiendo...');
         setRedirecting(true);
         router.replace("/pages");
@@ -70,11 +59,11 @@ export default function LoginForm() {
       {/* Contenido principal */}
       <div className="flex flex-col items-center justify-center min-h-screen px-6 py-6">
         {/* Logo superior */}
-        <div className="mb-8 flex">          
-            <Image width={240} height={120} src="/brand-green-kskin.png" alt="KSKIN-Brand" className="h-32 w-auto filter brightness-0 invert" priority={true} />          
-            <span className="text-white opacity-40 text-xs">v1.0</span>
+        <div className="mb-8 flex">
+          <Image width={240} height={120} src="/brand-green-kskin.png" alt="KSKIN-Brand" className="h-32 w-auto filter brightness-0 invert" priority={true} />
+          <span className="text-white opacity-40 text-xs">v1.0.1</span>
         </div>
-        
+
         {/* Tarjeta de login */}
         <div className="w-full max-w-md">
           <div className="bg-[#EFEBDD] rounded-3xl shadow-2xl p-8 relative">
@@ -157,38 +146,23 @@ export default function LoginForm() {
                 >
                   ¿Necesitas ayuda?
                 </button>
-              </div>              
+              </div>
             </form>
           </div>
         </div>
 
         {/* Footer con logos */}
-        <div className="mt-12 flex flex-col items-center gap-6">          
+        <div className="mt-12 flex flex-col items-center gap-6">
           <div className="flex items-center gap-3 opacity-60">
             <Image width={24} height={24} src="/brand-green-kskin.png" alt="KSKIN" className="w-16 filter brightness-0 invert" />
             <div className="text-white text-xs opacity-60">
               Salud y Estética Integral
             </div>
-          </div>          
+          </div>
           <div className="text-white text-xs opacity-40 mt-0">
             Derechos Reservados © 2024 Kskin
           </div>
         </div>
-      </div>
-
-      {/* Debug info */}
-      <div style={{
-        position: "absolute",
-        top: 72,
-        right: 16,
-        background: "rgba(0,0,0,0.5)",
-        color: "#fff",
-        padding: "2px 8px",
-        borderRadius: "6px",
-        fontSize: "12px",
-        zIndex: 50
-      }}>
-        {resolution.width} x {resolution.height}
       </div>
     </div>
   );

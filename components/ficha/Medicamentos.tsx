@@ -1,18 +1,72 @@
-import { UseFormRegister } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+import { Control, UseFormRegister, useFieldArray } from "react-hook-form";
+import { FaRegTrashCan } from "react-icons/fa6";
 import { FaCaretSquareRight } from "react-icons/fa";
-import { IFichaForm } from "./types";
+import { IFichaForm, IMedicamentoForm } from "./types";
 import { useAutoSaveContext } from "@/context/AutoSaveContext";
+import AutocompleteInput from "../prefabs/AutocompleteInput";
 
 export default function Medicamentos({
-    register
+    register,
+    control
 }: {
     register: UseFormRegister<IFichaForm>;
+    control: Control<IFichaForm>;
 }) {
     const { saveField } = useAutoSaveContext();
-    
-    // ✅ AGREGAR función helper para auto-guardado
+
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: "medicamentos"
+    });
+
+    const { data: medicamentos } = useQuery({
+        queryKey: ["medicamentos"],
+        queryFn: async () => {
+            const response = await fetch("/api/medicamentos");
+            const data = await response.json();
+            return data?.medicamentos || [];
+        }
+    });
+
     const handleAutoSave = (fieldName: string, value: string) => {
         saveField(fieldName, value);
+    };
+
+    const handleAgregarMedicamento = (selectedItem: { key: string | number; value: string }) => {
+        const medicamentoId = String(selectedItem.key);
+        const yaExiste = fields.some((field) => String(field.medicamentoId) === medicamentoId);
+
+        if (yaExiste) {
+            return;
+        }
+
+        const relacionId = `new_${Date.now()}`;
+        const nuevoMedicamento: IMedicamentoForm = {
+            relacionId,
+            medicamentoId
+        };
+
+        append(nuevoMedicamento);
+        handleAutoSave(`ficha.medicamento.${relacionId}.medicamento_id`, medicamentoId);
+    };
+
+    const handleRemoverMedicamento = (index: number) => {
+        const field = fields[index];
+        if (field?.medicamentoId) {
+            handleAutoSave(`ficha.medicamento.delete.${field.medicamentoId}`, "true");
+        }
+        remove(index);
+    };
+
+    const autocompleteItems = (medicamentos || []).map((medicamento: { id: string; nombre: string }) => ({
+        key: medicamento.id,
+        value: medicamento.nombre
+    }));
+
+    const getMedicamentoNombre = (medicamentoId: string) => {
+        const medicamento = (medicamentos || []).find((item: { id: string }) => item.id === medicamentoId);
+        return medicamento?.nombre || `Medicamento ID: ${medicamentoId}`;
     };
 
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -24,16 +78,42 @@ export default function Medicamentos({
                 Medicamentos
             </summary>
             <div className="mt-4 space-y-4">
-                <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                        <input
-                            {...register("paciente.medicamentos")}
-                            className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164]"
-                            onBlur={(e) => handleAutoSave("paciente.medicamentos", e.target.value)}
-                            placeholder="Nombre del medicamento"
-                        />
+                <AutocompleteInput
+                    items={autocompleteItems}
+                    onSelect={handleAgregarMedicamento}
+                    placeholder="Buscar y seleccionar medicamento..."
+                />
+
+                {fields.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                        {fields.map((field, index) => (
+                            <div
+                                key={field.relacionId || field.id || index}
+                                className="inline-flex items-center bg-[#f6eedb] text-[#68563c] px-3 py-1 rounded-full border border-[#d5c7aa] text-sm"
+                            >
+                                <input
+                                    type="hidden"
+                                    {...register(`medicamentos.${index}.relacionId`)}
+                                    value={field.relacionId || ""}
+                                />
+                                <input
+                                    type="hidden"
+                                    {...register(`medicamentos.${index}.medicamentoId`)}
+                                    value={field.medicamentoId || ""}
+                                />
+                                <span className="mr-2">{getMedicamentoNombre(String(field.medicamentoId || ""))}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoverMedicamento(index)}
+                                    className="text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full p-1 transition-colors"
+                                    title="Eliminar medicamento"
+                                >
+                                    <FaRegTrashCan size={12} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                </div>
+                )}
             </div>
         </details>
     </div>;
