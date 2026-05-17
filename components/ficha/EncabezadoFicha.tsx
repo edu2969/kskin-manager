@@ -66,6 +66,7 @@ export default function EncabezadoFicha({
             paciente={paciente || null}
             isOpen={showHistorico}
             onClose={() => setShowHistorico(false)}
+            isLoading={false}
         />
     </div>;
 }

@@ -1,49 +1,48 @@
-import RutInput from '@/components/prefabs/RutInput';
 import { Dialog, DialogTitle } from '@headlessui/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AiOutlineMan, AiOutlineWoman } from 'react-icons/ai';
 import { FaPersonCircleQuestion } from 'react-icons/fa6';
 import { IoMdClose } from 'react-icons/io';
-import { LuSearch } from "react-icons/lu";
-import Loader from '../Loader';
 import { INuevoArribo, IPaciente } from '../sucursal/types';
 import { useForm } from 'react-hook-form';
+import { AutocompleteClientSearchInput } from '../prefabs/AutomcompleteClientSearchInput';
+import { useQuery } from '@tanstack/react-query';
+import Loader from '../Loader';
 
 export default function ModalRegistroPaciente({
     show, registrarArribo, onClose
-} : {
+}: {
     show: boolean;
     registrarArribo: (paciente: INuevoArribo) => Promise<void>;
     onClose: () => void;
 }) {
-    const [searching, setSearching] = useState(false);
     const [rutBusqueda, setRutBusqueda] = useState("");
-    const [pacienteEncontrado, setPacienteEncontrado] = useState<IPaciente | null>(null);
+    const [pacienteSeleccionado, setPacienteSeleccionado] = useState<{ id: string, nombre: string, rut: string } | null>(null);
     const { register, setValue, handleSubmit, watch } = useForm<INuevoArribo>({
         defaultValues: {
             numeroIdentidad: "",
             nombreCompleto: '',
             genero: '',
+            tratoEspecial: false,
+            nombreSocial: ''
         }
     });
 
-    const handleBuscarPaciente = async () => {
-        console.log("Iniciando búsqueda de paciente con RUT:", rutBusqueda);
-        if (!rutBusqueda.trim()) return;
-        setSearching(true);
-        const response = await fetch(`/api/recepcion/pacientePorRut?rut=${encodeURIComponent(rutBusqueda)}`);
-        const data = await response.json();
-        console.log("Data", data);
-        if (data.ok && data.paciente) {
-            console.log("Paciente encontrado:", data.paciente);            
-            setPacienteEncontrado(data.paciente);
-            setValue("numeroIdentidad", data.paciente.numeroIdentidad || "");
-        } else {
-            setValue("numeroIdentidad", "");
-            setPacienteEncontrado(null);
-        }
-        setSearching(false);
-    }    
+    const { data: pacienteEncontrado, isLoading } = useQuery<IPaciente>({
+        queryKey: ["paciente-encontrado", pacienteSeleccionado?.id],
+        queryFn: async () => {
+            const res = await fetch(`/api/paciente/byId/${pacienteSeleccionado?.id}`);
+            if (!res.ok) throw new Error("Error fetching paciente details");
+            const data = await res.json();
+            return data.paciente;
+        },
+        enabled: !!pacienteSeleccionado
+    });
+    
+    useEffect(() => {
+        console.log("Paciente seleccionado", pacienteSeleccionado);
+        console.log("paciente encontrado", pacienteEncontrado);
+    }, [pacienteSeleccionado, pacienteEncontrado]);
 
     const onSubmit = async (formData: INuevoArribo) => {
         console.log("Formulario enviado con datos:", formData, pacienteEncontrado);
@@ -51,7 +50,7 @@ export default function ModalRegistroPaciente({
         registrarArribo({
             id: pacienteEncontrado.id || null,
             numeroIdentidad: rutBusqueda,
-            nombreCompleto:  formData.nombreCompleto || "",
+            nombreCompleto: formData.nombreCompleto || "",
             genero: formData.genero || pacienteEncontrado.genero,
             tratoEspecial: pacienteEncontrado.tratoEspecial || false,
             nombreSocial: formData.nombreSocial || pacienteEncontrado.nombreSocial || ""
@@ -66,24 +65,24 @@ export default function ModalRegistroPaciente({
     const isFormValid = useMemo(() => {
         // Si no hay paciente encontrado, el botón debe estar deshabilitado
         if (!pacienteEncontrado) return false;
-        
+
         // Si es un paciente existente (no nuevo), siempre es válido
         if (!pacienteEncontrado.nuevo) return true;
-        
+
         // Si es un paciente nuevo, validar campos requeridos
         return (
             (nombreCompleto || "").trim().length > 0 &&
             (genero || "").trim().length > 0
         );
     }, [pacienteEncontrado, nombreCompleto, genero]);
-        
+
     return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
         <div className="fixed inset-0 bg-black/30" />
         <form onSubmit={handleSubmit(onSubmit)} className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-[96%] max-w-md">
             <button
                 className="absolute top-2 right-2 text-[#8e9b6d] hover:text-[#68563c] transition-colors"
                 onClick={() => {
-                    setPacienteEncontrado(null);
+                    setPacienteSeleccionado(null);
                     onClose();
                 }}
             >
@@ -91,29 +90,33 @@ export default function ModalRegistroPaciente({
             </button>
             <DialogTitle className="font-bold text-lg mb-4 text-[#6a3858]">Registrar paciente</DialogTitle>
             <div className="w-full mb-4">
-                <label className="block text-sm font-semibold text-[#68563c] mb-1">RUT del paciente</label>
+                <label className="block text-sm font-semibold text-[#68563c] mb-1">Nombre/RUT del paciente</label>
                 <div className="flex gap-2">
-                    <div className="w-52">
-                        <RutInput
-                            value={rutBusqueda}
-                            onChange={setRutBusqueda}
-                            className="w-48"
-                            placeholder="Ej: 12.345.678-9"
+                    <div className="w-full">
+                        <AutocompleteClientSearchInput
+                            className="w-full"
+                            placeholder="12.987.654-3 / Nombre"
+                            onSelected={(paciente) => {
+                                console.log(
+                                    "Paciente seleccionado:",
+                                    paciente
+                                );
+                                setRutBusqueda(paciente.rut);
+                                setPacienteSeleccionado({
+                                    id: paciente.id,
+                                    nombre: paciente.nombre,
+                                    rut: paciente.rut
+                                });
+                                setValue(
+                                    "numeroIdentidad",
+                                    paciente.rut
+                                );
+                            }}
                         />
                     </div>
-                    <button
-                        className="rounded bg-[#66754c] hover:bg-[#8e9b6d] text-white h-12 w-12 flex flex-col items-center justify-center shadow transition"
-                        onClick={handleBuscarPaciente}
-                        type="button"
-                        title="Buscar"
-                    >
-                        {!searching ? (
-                            <LuSearch size="2.4rem" />
-                        ) : (<div className="w-full text-center ml-2 pl-0.5"><Loader texto="" /></div>)}
-                    </button>
                 </div>
             </div>
-            {pacienteEncontrado && (
+            {!isLoading && pacienteEncontrado && (
                 <div className="mb-4 p-4 rounded-lg bg-[#fad379]/20 border border-[#fad379] flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                         {pacienteEncontrado.genero == "F" ? (
@@ -127,7 +130,7 @@ export default function ModalRegistroPaciente({
                             <div className="font-semibold text-[#68563c]">
                                 {pacienteEncontrado.nuevo
                                     ? "Nuevo paciente"
-                                    : (pacienteEncontrado.nombres + " " + pacienteEncontrado.apellidos)}
+                                    : (pacienteEncontrado.nombreSocial || pacienteEncontrado.nombres + " " + pacienteEncontrado.apellidos)}
                             </div>
                             <div className="text-xs text-[#8e9b6d]">{pacienteEncontrado.numeroIdentidad}</div>
                         </div>
@@ -159,14 +162,8 @@ export default function ModalRegistroPaciente({
                                 <input
                                     type="checkbox"
                                     id="tratoEspecial"
+                                    {...register("tratoEspecial")}
                                     checked={!!pacienteEncontrado.tratoEspecial}
-                                    onChange={e =>
-                                        setPacienteEncontrado(prev => prev ? ({
-                                            ...prev,
-                                            tratoEspecial: e.target.checked,
-                                            nombreSocial: e.target.checked ? (prev.nombreSocial || "") : ""
-                                        }) : null)
-                                    }
                                     className="mr-2 accent-[#66754c]"
                                 />
                                 <label htmlFor="tratoEspecial" className="text-sm font-semibold text-[#68563c]">Trato especial</label>
@@ -186,6 +183,13 @@ export default function ModalRegistroPaciente({
                     )}
                 </div>
             )}
+            {isLoading && (
+                <div className="mb-4 p-4 rounded-lg bg-[#fad379]/20 border border-[#fad379] flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                        <Loader texto="Identificando paciente..." />
+                    </div>
+                </div>
+            )}
             <div className="flex gap-2 mt-6 h-12">
                 <button
                     className="flex-1 rounded-full bg-[#66754c] hover:bg-[#8e9b6d] text-white font-semibold py-2 transition disabled:opacity-50 shadow"
@@ -195,9 +199,9 @@ export default function ModalRegistroPaciente({
                 </button>
                 <button
                     className="flex-1 rounded-full bg-[#d5c7aa] hover:bg-[#ac9164] text-[#68563c] hover:text-white font-semibold py-2 transition shadow"
-                    onClick={() => {                        
+                    onClick={() => {
                         setRutBusqueda("");
-                        setPacienteEncontrado(null);
+                        setPacienteSeleccionado(null);
                         onClose();
                     }}
                 >

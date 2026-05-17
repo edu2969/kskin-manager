@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useForm, FieldErrors } from "react-hook-form";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import Image from "next/image";
 import Loader from "./Loader";
@@ -23,6 +23,7 @@ export default function LoginForm() {
     formState: {
       errors
     },
+    setError,
     handleSubmit,
   } = useForm<LoginFormData>();
 
@@ -36,9 +37,11 @@ export default function LoginForm() {
         console.log('Login exitoso, redirigiendo...');
         setRedirecting(true);
         router.replace("/pages");
+      } else {
+        setError("root", { message: "Credenciales inválidas" });
+        setIsLoggingIn(false);
       }
-    } catch (error) {
-      console.error('Error en onSubmit:', error);
+    } catch (error) {      
       setIsLoggingIn(false);
     }
   };
@@ -61,7 +64,7 @@ export default function LoginForm() {
         {/* Logo superior */}
         <div className="mb-8 flex">
           <Image width={240} height={120} src="/brand-green-kskin.png" alt="KSKIN-Brand" className="h-32 w-auto filter brightness-0 invert" priority={true} />
-          <span className="text-white opacity-40 text-xs">v1.0.1</span>
+          <span className="text-white opacity-40 text-xs">v1.0.2</span>
         </div>
 
         {/* Tarjeta de login */}
@@ -94,7 +97,7 @@ export default function LoginForm() {
                   className="w-full pl-12 pr-4 py-4 bg-white border border-[#DCD0BE] rounded-full text-[#4A4A4A] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#8B9B7A] focus:border-transparent transition-all"
                   required
                 />
-                {errors.email && <p className="text-red-500 text-sm mt-1 ml-4">E-mail requerido</p>}
+                {errors.email && <p className="text-red-500 text-sm mt-1 ml-4">'E-mail requerido'</p>}
               </div>
 
               {/* Input Contraseña */}
@@ -114,7 +117,7 @@ export default function LoginForm() {
                   className="w-full pl-12 pr-4 py-4 bg-white border border-[#DCD0BE] rounded-full text-[#4A4A4A] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#8B9B7A] focus:border-transparent transition-all"
                   required
                 />
-                {errors.password && <p className="text-red-500 text-sm mt-1 ml-4">Contraseña requerida</p>}
+                {(errors.password || errors.root) && <p className="text-red-500 text-sm mt-1 ml-4">{ errors.root ? errors.root.message : 'Contraseña requerida' }</p>}                
               </div>
 
               {/* Botón de entrada */}

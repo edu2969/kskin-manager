@@ -29,7 +29,6 @@ export default function Recepcion({
     const queryClient = useQueryClient();
 
     const registrarArribo = async (nuevoArribo: INuevoArribo) => {
-        console.log("Registrando nuevo arribo:", nuevoArribo);
         setLoading(true);
         try {
             const nombreCompletoSeparado = (nuevoArribo.nombreCompleto || "").split(" ");

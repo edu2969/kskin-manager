@@ -19,11 +19,13 @@ import { useQuery } from "@tanstack/react-query";
 export default function HistoricoFichas({
     isOpen,
     onClose,
-    paciente
+    paciente,
+    isLoading
 }: {
     isOpen: boolean;
     onClose: () => void;
     paciente: IPaciente | null;
+    isLoading: boolean;
 }) {
     const [fichaSeleccionada, setFichaSeleccionada] = useState<string | null>(null);
     const [modalDetalle, setModalDetalle] = useState(false);
