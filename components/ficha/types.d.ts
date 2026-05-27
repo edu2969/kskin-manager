@@ -31,6 +31,7 @@ export interface IHigieneForm {
 }
 
 export interface IFichaForm {
+    fecha: string;
     anamnesis: string;
     receta: string;
     tratamiento: string;

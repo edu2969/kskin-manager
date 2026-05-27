@@ -64,7 +64,7 @@ export default function InformacionPersonal({
     return <div className="space-y-2 md:space-y-4">
         <h2 className="text-xl font-bold text-[#6a3858] mb-4">Información Personal</h2>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">                        
             <div>
                 <label className="block text-xs font-semibold text-[#68563c] mb-1">
                     Nombres

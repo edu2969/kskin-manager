@@ -51,6 +51,7 @@ export default function Ficha({ pacienteId, fichaId }: {
     const [tab, setTab] = useState("personal");    
     const formMethods = useForm<IFichaForm>({
         defaultValues: {
+            fecha: undefined,
             anamnesis: "",
             receta: "",
             tratamiento: "",
@@ -114,6 +115,9 @@ export default function Ficha({ pacienteId, fichaId }: {
     useEffect(() => {
         if (ficha) {
             const formData: IFichaForm = {
+                fecha: ficha.fecha
+                        ? new Date(ficha.fecha).toISOString().split('T')[0] 
+                        : "",
                 anamnesis: ficha.anamnesis || "",
                 receta: ficha.receta || "",
                 tratamiento: ficha.tratamiento || "",
@@ -270,14 +274,17 @@ export default function Ficha({ pacienteId, fichaId }: {
             )}
 
             {!loadingFicha && ficha && <>
-                <EncabezadoFicha paciente={ficha.paciente} profesional={{
+                <EncabezadoFicha 
+                paciente={ficha.paciente} 
+                profesional={{
                     id: ficha?.profesional?.id || "",
                     nombre: ficha?.profesional?.nombre || "",
                     email: ficha?.profesional?.email || "",
                     especialidades: ficha?.profesional?.especialidades?.map((e: {
                         nombre: string;
                     }) => e.nombre) || []
-                }} />
+                }}
+                register={register} />
 
                 <div className="flex flex-col md:flex-row h-[calc(100vh-166px)] relative">
                 {/* Contenido (izquierda) - Conectado con tab activo */}

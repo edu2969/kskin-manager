@@ -1,10 +1,14 @@
 import { IPaciente } from "../sucursal/types";
 import { useState } from "react";
 import HistoricoFichas from "../HistoricoFichas";
+import { UseFormRegister } from "react-hook-form";
+import { IFichaForm } from "./types";
+import { useAutoSaveContext } from "@/context/AutoSaveContext";
 
 export default function EncabezadoFicha({
     paciente,
-    profesional
+    profesional,
+    register
 }: {
     paciente: IPaciente
     profesional: {
@@ -13,8 +17,15 @@ export default function EncabezadoFicha({
         email: string;
         especialidades: string[];
     } | null
+    register: UseFormRegister<IFichaForm>;
 }) {
     const [showHistorico, setShowHistorico] = useState(false);
+    const { saveField } = useAutoSaveContext();
+    
+    // ✅ AGREGAR función helper para auto-guardado
+    const handleAutoSave = (fieldName: string, value: string | number) => {
+        saveField(fieldName, value);
+    };
 
     return <div className="mb-1 md:mb-4">
         <div className="bg-[#f6eedb] rounded-lg p-4 shadow border border-[#d5c7aa]">
@@ -51,15 +62,29 @@ export default function EncabezadoFicha({
                 </div>
             </div>
 
+<div className="flex">
             {/* Histórico */}
             <button
-                className="mt-3 pt-3 border-t border-[#d5c7aa] w-full text-left"
+                className="mt-3 pt-3 w-full text-left"
                 onClick={() => setShowHistorico(true)}
             >
                 <div className="text-xs text-[#8e9b6d] hover:text-[#68563c] transition-colors cursor-pointer">
                     📋 Ver histórico de fichas
                 </div>
             </button>
+            
+            <div>
+                <label className="block text-xs font-semibold text-[#68563c] mb-1">
+                    Fecha de atención
+                </label>
+                <input
+                    type="date"
+                    className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                    {...register("fecha")}
+                    onBlur={(e) => handleAutoSave("fecha", e.target.value)}
+                />
+            </div>
+            </div>
         </div>
             
         <HistoricoFichas
