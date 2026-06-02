@@ -21,7 +21,7 @@ export default function EncabezadoFicha({
 }) {
     const [showHistorico, setShowHistorico] = useState(false);
     const { saveField } = useAutoSaveContext();
-    
+
     // ✅ AGREGAR función helper para auto-guardado
     const handleAutoSave = (fieldName: string, value: string | number) => {
         saveField(fieldName, value);
@@ -62,31 +62,31 @@ export default function EncabezadoFicha({
                 </div>
             </div>
 
-<div className="flex">
-            {/* Histórico */}
-            <button
-                className="mt-3 pt-3 w-full text-left"
-                onClick={() => setShowHistorico(true)}
-            >
-                <div className="text-xs text-[#8e9b6d] hover:text-[#68563c] transition-colors cursor-pointer">
-                    📋 Ver histórico de fichas
+            <div className="flex">
+                {/* Histórico */}
+                <button
+                    className="mt-3 pt-3 w-full text-left"
+                    onClick={() => setShowHistorico(true)}
+                >
+                    <div className="text-xs text-[#8e9b6d] hover:text-[#68563c] transition-colors cursor-pointer">
+                        📋 Ver histórico de fichas
+                    </div>
+                </button>
+
+                <div>
+                    <label className="block text-xs font-semibold text-[#68563c] mb-1">
+                        Fecha de atención
+                    </label>
+                    <input
+                        type="date"
+                        className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                        {...register("fecha")}
+                        onBlur={(e) => handleAutoSave("fecha", e.target.value)}
+                    />
                 </div>
-            </button>
-            
-            <div>
-                <label className="block text-xs font-semibold text-[#68563c] mb-1">
-                    Fecha de atención
-                </label>
-                <input
-                    type="date"
-                    className="w-full border border-[#d5c7aa] rounded px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
-                    {...register("fecha")}
-                    onBlur={(e) => handleAutoSave("fecha", e.target.value)}
-                />
-            </div>
             </div>
         </div>
-            
+
         <HistoricoFichas
             paciente={paciente || null}
             isOpen={showHistorico}

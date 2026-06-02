@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { AiOutlineMan, AiOutlineWoman } from 'react-icons/ai';
 import { FaPersonCircleQuestion } from 'react-icons/fa6';
 import { IoMdClose } from 'react-icons/io';
+import { FaUserPlus } from "react-icons/fa";
 import { INuevoArribo, IPaciente } from '../sucursal/types';
 import { useForm } from 'react-hook-form';
 import { AutocompleteClientSearchInput } from '../prefabs/AutomcompleteClientSearchInput';
@@ -31,6 +32,20 @@ export default function ModalRegistroPaciente({
     const { data: pacienteEncontrado, isLoading } = useQuery<IPaciente>({
         queryKey: ["paciente-encontrado", pacienteSeleccionado?.id],
         queryFn: async () => {
+            // Si es un paciente nuevo creado con el botón "Nuevo"
+            if (pacienteSeleccionado?.id === "nuevo") {
+                return {
+                    id: null,
+                    numeroIdentidad: "",
+                    nombres: "",
+                    apellidos: "",
+                    genero: "",
+                    nuevo: true,
+                    tratoEspecial: false,
+                    nombreSocial: ""
+                } as unknown as IPaciente;
+            }
+            
             const res = await fetch(`/api/paciente/byId/${pacienteSeleccionado?.id}`);
             if (!res.ok) throw new Error("Error fetching paciente details");
             const data = await res.json();
@@ -114,6 +129,23 @@ export default function ModalRegistroPaciente({
                             }}
                         />
                     </div>
+                    <button
+                        type="button"
+                        className="bg-[#ac9164] hover:bg-[#8e9b6d] text-white rounded-lg px-4 py-2 transition flex items-center gap-2 font-semibold"
+                        onClick={() => {
+                            setRutBusqueda("");
+                            setPacienteSeleccionado(null);
+                            // Crear un nuevo paciente vacío
+                            setPacienteSeleccionado({
+                                id: "nuevo",
+                                nombre: "",
+                                rut: ""
+                            });
+                        }}
+                    >
+                        <FaUserPlus size={20} />
+                        Nuevo
+                    </button>
                 </div>
             </div>
             {!isLoading && pacienteEncontrado && (
