@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { AutocompleteClientSearchInput } from '../prefabs/AutomcompleteClientSearchInput';
 import { useQuery } from '@tanstack/react-query';
 import Loader from '../Loader';
+import RutInput from '../prefabs/RutInput';
 
 export default function ModalRegistroPaciente({
     show, registrarArribo, onClose
@@ -19,7 +20,7 @@ export default function ModalRegistroPaciente({
 }) {
     const [rutBusqueda, setRutBusqueda] = useState("");
     const [pacienteSeleccionado, setPacienteSeleccionado] = useState<{ id: string, nombre: string, rut: string } | null>(null);
-    const { register, setValue, handleSubmit, watch } = useForm<INuevoArribo>({
+    const { register, setValue, handleSubmit, watch, reset } = useForm<INuevoArribo>({
         defaultValues: {
             numeroIdentidad: "",
             nombreCompleto: '',
@@ -64,17 +65,21 @@ export default function ModalRegistroPaciente({
         if (!pacienteEncontrado) return;
         registrarArribo({
             id: pacienteEncontrado.id || null,
-            numeroIdentidad: rutBusqueda,
+            numeroIdentidad: formData.numeroIdentidad,
             nombreCompleto: formData.nombreCompleto || "",
             genero: formData.genero || pacienteEncontrado.genero,
             tratoEspecial: pacienteEncontrado.tratoEspecial || false,
             nombreSocial: formData.nombreSocial || pacienteEncontrado.nombreSocial || ""
         });
+        reset();
+        setRutBusqueda("");
+        setPacienteSeleccionado(null);
         onClose();
     }
 
     const nombreCompleto = watch("nombreCompleto");
     const genero = watch("genero");
+    const numeroIdentidad = watch("numeroIdentidad");
 
     // Validación inteligente del botón
     const isFormValid = useMemo(() => {
@@ -86,10 +91,11 @@ export default function ModalRegistroPaciente({
 
         // Si es un paciente nuevo, validar campos requeridos
         return (
+            (numeroIdentidad || "").trim().length > 0 &&
             (nombreCompleto || "").trim().length > 0 &&
             (genero || "").trim().length > 0
         );
-    }, [pacienteEncontrado, nombreCompleto, genero]);
+    }, [pacienteEncontrado, numeroIdentidad, nombreCompleto, genero]);
 
     return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
         <div className="fixed inset-0 bg-black/30" />
@@ -97,6 +103,8 @@ export default function ModalRegistroPaciente({
             <button
                 className="absolute top-2 right-2 text-[#8e9b6d] hover:text-[#68563c] transition-colors"
                 onClick={() => {
+                    reset();
+                    setRutBusqueda("");
                     setPacienteSeleccionado(null);
                     onClose();
                 }}
@@ -170,6 +178,15 @@ export default function ModalRegistroPaciente({
                     {pacienteEncontrado.nuevo && (
                         <>
                             <div>
+                                <label className="block text-sm font-semibold text-[#68563c] mb-1">RUT *</label>
+                                <RutInput
+                                    value={numeroIdentidad}
+                                    onChange={(value: string) => setValue("numeroIdentidad", value)}
+                                    placeholder="Ej: 12.345.678-9"
+                                    className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                                />
+                            </div>
+                            <div>
                                 <label className="block text-sm font-semibold text-[#68563c] mb-1">Nombre</label>
                                 <input
                                     type="text"
@@ -232,6 +249,7 @@ export default function ModalRegistroPaciente({
                 <button
                     className="flex-1 rounded-full bg-[#d5c7aa] hover:bg-[#ac9164] text-[#68563c] hover:text-white font-semibold py-2 transition shadow"
                     onClick={() => {
+                        reset();
                         setRutBusqueda("");
                         setPacienteSeleccionado(null);
                         onClose();
