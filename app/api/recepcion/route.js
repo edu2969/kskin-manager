@@ -47,6 +47,18 @@ export async function POST(req) {
             if(pacienteData.tratoEspecial) {
                 nuevoPacienteData['nombre_social'] = pacienteData.nombreSocial;
             }
+
+            const { data: pacienteExistente, error: pacienteExistenteError } = await supabase
+                .from("pacientes")
+                .select("id")
+                .eq("numero_identidad", nuevoPacienteData.numero_identidad)
+                .single();
+
+            if (pacienteExistente || pacienteExistenteError) {
+                console.warn("[POST] /api/recepcion - Paciente ya existe con ID:", pacienteExistente.id || pacienteExistenteError);
+                return NextResponse.json({ error: "Paciente ya existe" }, { status: 400 });
+            }
+
             const { data: nuevoPaciente, error: pacienteCreateError } = await supabase
                 .from("pacientes")
                 .insert(nuevoPacienteData)

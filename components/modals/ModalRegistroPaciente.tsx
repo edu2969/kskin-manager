@@ -10,6 +10,9 @@ import { AutocompleteClientSearchInput } from '../prefabs/AutomcompleteClientSea
 import { useQuery } from '@tanstack/react-query';
 import Loader from '../Loader';
 import RutInput from '../prefabs/RutInput';
+import { isValidRutFormat } from '@/app/utils/rutFormatter';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 export default function ModalRegistroPaciente({
     show, registrarArribo, onClose
@@ -20,6 +23,11 @@ export default function ModalRegistroPaciente({
 }) {
     const [rutBusqueda, setRutBusqueda] = useState("");
     const [pacienteSeleccionado, setPacienteSeleccionado] = useState<{ id: string, nombre: string, rut: string } | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [rutError, setRutError] = useState<string | null>(null);
+    const [showPostCreateDialog, setShowPostCreateDialog] = useState(false);
+    const [postCreatePacienteId, setPostCreatePacienteId] = useState<string | null>(null);
+    const router = useRouter();
     const { register, setValue, handleSubmit, watch, reset } = useForm<INuevoArribo>({
         defaultValues: {
             numeroIdentidad: "",
@@ -62,24 +70,113 @@ export default function ModalRegistroPaciente({
 
     const onSubmit = async (formData: INuevoArribo) => {
         console.log("Formulario enviado con datos:", formData, pacienteEncontrado);
-        if (!pacienteEncontrado) return;
-        registrarArribo({
-            id: pacienteEncontrado.id || null,
-            numeroIdentidad: formData.numeroIdentidad,
-            nombreCompleto: formData.nombreCompleto || "",
-            genero: formData.genero || pacienteEncontrado.genero,
-            tratoEspecial: pacienteEncontrado.tratoEspecial || false,
-            nombreSocial: formData.nombreSocial || pacienteEncontrado.nombreSocial || ""
-        });
-        reset();
-        setRutBusqueda("");
-        setPacienteSeleccionado(null);
-        onClose();
+
+        // Paciente existente: registrar arribo directamente
+        if (pacienteEncontrado && !pacienteEncontrado.nuevo) {
+            registrarArribo({
+                id: pacienteEncontrado.id || null,
+                numeroIdentidad: formData.numeroIdentidad,
+                nombreCompleto: formData.nombreCompleto || "",
+                genero: formData.genero || pacienteEncontrado.genero,
+                tratoEspecial: pacienteEncontrado.tratoEspecial || false,
+                nombreSocial: formData.nombreSocial || pacienteEncontrado.nombreSocial || ""
+            });
+            reset();
+            setRutBusqueda("");
+            setPacienteSeleccionado(null);
+            onClose();
+            return;
+        }
+
+        // Paciente nuevo: crear vía API
+        if (!pacienteEncontrado || !pacienteEncontrado.nuevo) return;
+
+        // Validar RUT antes de enviar
+        const rutLimpio = (formData.numeroIdentidad || "").replace(/[.\-]/g, "");
+        if (!isValidRutFormat(formData.numeroIdentidad || "")) {
+            setRutError("El RUT no es válido");
+            toast.error("El RUT ingresado no es válido");
+            return;
+        }
+
+        setIsCreating(true);
+        setRutError(null);
+
+        let createdPacienteId: string | null = null;
+
+        try {
+            const res = await fetch("/api/paciente", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    nombres: formData.nombreCompleto?.split(" ")[0] || "",
+                    apellidos: formData.nombreCompleto?.split(" ").slice(1).join(" ") || "",
+                    numeroIdentidad: rutLimpio,
+                    genero: formData.genero,
+                    nombreSocial: formData.nombreSocial || null,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Error al crear paciente");
+            }
+
+            toast.success("Paciente creado exitosamente");
+
+            const createdPacienteId = data.paciente?.id || null;
+
+            // Registrar arribo con el paciente recién creado
+            await registrarArribo({
+                id: createdPacienteId,
+                numeroIdentidad: formData.numeroIdentidad,
+                nombreCompleto: formData.nombreCompleto || "",
+                genero: formData.genero || "",
+                tratoEspecial: false,
+                nombreSocial: formData.nombreSocial || "",
+            });
+
+            reset();
+            setRutBusqueda("");
+            setPacienteSeleccionado(null);
+        } catch (error) {
+            console.error("Error creando paciente:", error);
+            toast.error(error instanceof Error ? error.message : "Error al crear paciente");
+        } finally {
+            setIsCreating(false);
+            setRutBusqueda("");
+            // Paso 6: mostrar opción post-crear
+            if (createdPacienteId) {
+                setPostCreatePacienteId(createdPacienteId);
+                setShowPostCreateDialog(true);
+            } else {
+                onClose();
+            }
+        }
     }
 
     const nombreCompleto = watch("nombreCompleto");
     const genero = watch("genero");
     const numeroIdentidad = watch("numeroIdentidad");
+
+    // Validación en tiempo real del RUT para pacientes nuevos
+    useEffect(() => {
+        if (!pacienteEncontrado?.nuevo) {
+            setRutError(null);
+            return;
+        }
+        const rut = numeroIdentidad || "";
+        if (rut.length === 0) {
+            setRutError(null);
+            return;
+        }
+        if (!isValidRutFormat(rut)) {
+            setRutError("El RUT no es válido");
+        } else {
+            setRutError(null);
+        }
+    }, [numeroIdentidad, pacienteEncontrado]);
 
     // Validación inteligente del botón
     const isFormValid = useMemo(() => {
@@ -89,17 +186,18 @@ export default function ModalRegistroPaciente({
         // Si es un paciente existente (no nuevo), siempre es válido
         if (!pacienteEncontrado.nuevo) return true;
 
-        // Si es un paciente nuevo, validar campos requeridos
+        // Si es un paciente nuevo, validar campos requeridos y RUT válido
         return (
+            rutError === null &&
             (numeroIdentidad || "").trim().length > 0 &&
             (nombreCompleto || "").trim().length > 0 &&
             (genero || "").trim().length > 0
         );
-    }, [pacienteEncontrado, numeroIdentidad, nombreCompleto, genero]);
+    }, [pacienteEncontrado, numeroIdentidad, nombreCompleto, genero, rutError]);
 
-    return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
+    return (<Dialog open={show} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center p-4 sm:p-6">
         <div className="fixed inset-0 bg-black/30" />
-        <form onSubmit={handleSubmit(onSubmit)} className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-[96%] max-w-md">
+        <form onSubmit={handleSubmit(onSubmit)} className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-full max-w-md">
             <button
                 className="absolute top-2 right-2 text-[#8e9b6d] hover:text-[#68563c] transition-colors"
                 onClick={() => {
@@ -108,6 +206,7 @@ export default function ModalRegistroPaciente({
                     setPacienteSeleccionado(null);
                     onClose();
                 }}
+                aria-label="Cerrar modal"
             >
                 <IoMdClose size={22} />
             </button>
@@ -135,25 +234,17 @@ export default function ModalRegistroPaciente({
                                     paciente.rut
                                 );
                             }}
+                            onCreateNew={(rut) => {
+                                setRutBusqueda(rut);
+                                setValue("numeroIdentidad", rut);
+                                setPacienteSeleccionado({
+                                    id: "nuevo",
+                                    nombre: "",
+                                    rut: rut,
+                                });
+                            }}
                         />
                     </div>
-                    <button
-                        type="button"
-                        className="bg-[#ac9164] hover:bg-[#8e9b6d] text-white rounded-lg px-4 py-2 transition flex items-center gap-2 font-semibold"
-                        onClick={() => {
-                            setRutBusqueda("");
-                            setPacienteSeleccionado(null);
-                            // Crear un nuevo paciente vacío
-                            setPacienteSeleccionado({
-                                id: "nuevo",
-                                nombre: "",
-                                rut: ""
-                            });
-                        }}
-                    >
-                        <FaUserPlus size={20} />
-                        Nuevo
-                    </button>
                 </div>
             </div>
             {!isLoading && pacienteEncontrado && (
@@ -183,8 +274,11 @@ export default function ModalRegistroPaciente({
                                     value={numeroIdentidad}
                                     onChange={(value: string) => setValue("numeroIdentidad", value)}
                                     placeholder="Ej: 12.345.678-9"
-                                    className="w-full rounded border border-[#d5c7aa] px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20"
+                                    className={`w-full rounded border px-3 py-2 bg-white focus:border-[#ac9164] focus:ring-2 focus:ring-[#fad379]/20 ${rutError ? "border-red-500 focus:ring-red-500" : "border-[#d5c7aa] focus:border-[#ac9164] focus:ring-[#fad379]/20"}`}
                                 />
+                                {rutError && (
+                                    <p className="text-xs text-red-600 mt-1" role="alert">{rutError}</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-[#68563c] mb-1">Nombre</label>
@@ -239,12 +333,13 @@ export default function ModalRegistroPaciente({
                     </div>
                 </div>
             )}
-            <div className="flex gap-2 mt-6 h-12">
+            <div className="flex flex-col sm:flex-row gap-2 mt-6 h-12">
                 <button
                     className="flex-1 rounded-full bg-[#66754c] hover:bg-[#8e9b6d] text-white font-semibold py-2 transition disabled:opacity-50 shadow"
-                    disabled={!isFormValid}
+                    disabled={!isFormValid || isCreating}
                     type="submit"
-                >Aceptar
+                >
+                    {isCreating ? "Creando..." : pacienteEncontrado?.nuevo ? "CREAR" : "Aceptar"}
                 </button>
                 <button
                     className="flex-1 rounded-full bg-[#d5c7aa] hover:bg-[#ac9164] text-[#68563c] hover:text-white font-semibold py-2 transition shadow"
@@ -258,6 +353,36 @@ export default function ModalRegistroPaciente({
                     Cancelar
                 </button>
             </div>
+
+            {/* Paso 6: Diálogo post-crear */}
+            <Dialog open={showPostCreateDialog} onClose={() => setShowPostCreateDialog(false)} className="fixed z-50 inset-0 flex items-center justify-center p-4 sm:p-6">
+                <div className="fixed inset-0 bg-black/40" />
+                <div className="relative bg-[#f6eedb] rounded-xl shadow-xl p-8 z-10 border border-[#d5c7aa] w-full max-w-md">
+                    <DialogTitle className="font-bold text-lg mb-4 text-[#6a3858]">Paciente creado</DialogTitle>
+                    <p className="mb-6 text-[#68563c]">¿Qué deseas hacer ahora?</p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                            onClick={() => {
+                                setShowPostCreateDialog(false);
+                                onClose();
+                            }}
+                            className="flex-1 rounded-full bg-[#d5c7aa] hover:bg-[#ac9164] text-[#68563c] font-semibold py-2 transition shadow"
+                        >
+                            Cerrar
+                        </button>
+                        <button
+                            onClick={() => {
+                                setShowPostCreateDialog(false);
+                                onClose();
+                                router.push(`/modulos/ficha?pacienteId=${postCreatePacienteId}`);
+                            }}
+                            className="flex-1 rounded-full bg-[#66754c] hover:bg-[#8e9b6d] text-white font-semibold py-2 transition shadow"
+                        >
+                            Abrir ficha
+                        </button>
+                    </div>
+                </div>
+            </Dialog>
         </form>
     </Dialog>);
 }

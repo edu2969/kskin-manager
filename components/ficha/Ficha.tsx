@@ -48,7 +48,7 @@ export default function Ficha({ pacienteId, fichaId }: {
     pacienteId: string | null;
     fichaId: string | null;
 }) {
-    const [tab, setTab] = useState("personal");    
+    const [tab, setTab] = useState("personal");
     const formMethods = useForm<IFichaForm>({
         defaultValues: {
             fecha: undefined,
@@ -56,7 +56,7 @@ export default function Ficha({ pacienteId, fichaId }: {
             receta: "",
             tratamiento: "",
             motivoConsulta: "",
-            examenes: "",            
+            examenes: "",
             paciente: {
                 nombres: "",
                 apellidos: "",
@@ -89,11 +89,12 @@ export default function Ficha({ pacienteId, fichaId }: {
             }
         }
     });
-    
+
     const { register, control, setValue, reset } = formMethods;
     const [showTooltip, setShowTooltip] = useState(false);
     const [showModalSalir, setShowModalSalir] = useState(false);
     const [showAlertaAlergias, setShowAlertaAlergias] = useState(false);
+    
     const router = useRouter();
 
     const { data: ficha, isLoading: loadingFicha } = useQuery({
@@ -106,8 +107,8 @@ export default function Ficha({ pacienteId, fichaId }: {
             const data = await res.json();
             if (!res.ok) {
                 throw new Error(data.error || 'Error al cargar la ficha');
-            }    
-            console.log("📡 Ficha obtenida:", data);        
+            }
+            console.log("📡 Ficha obtenida:", data);
             return data;
         }
     });
@@ -116,12 +117,12 @@ export default function Ficha({ pacienteId, fichaId }: {
         if (ficha) {
             const formData: IFichaForm = {
                 fecha: ficha.fecha
-                        ? new Date(ficha.fecha).toISOString().split('T')[0] 
+                        ? new Date(ficha.fecha).toISOString().split('T')[0]
                         : "",
                 anamnesis: ficha.anamnesis || "",
                 receta: ficha.receta || "",
                 tratamiento: ficha.tratamiento || "",
-                motivoConsulta: ficha.motivoConsulta || "",                
+                motivoConsulta: ficha.motivoConsulta || "",
                 examenes: ficha.examenes || "",
                 paciente: {
                     nombres: ficha.paciente?.nombres || "",
@@ -132,10 +133,10 @@ export default function Ficha({ pacienteId, fichaId }: {
                     telefono: ficha.paciente?.telefono || "",
                     email: ficha.paciente?.email || "",
                     direccion: ficha.paciente?.direccion || "",
-                    fechaNacimiento: ficha.paciente?.fechaNacimiento 
-                        ? new Date(ficha.paciente.fechaNacimiento).toISOString().split('T')[0] 
+                    fechaNacimiento: ficha.paciente?.fechaNacimiento
+                        ? new Date(ficha.paciente.fechaNacimiento).toISOString().split('T')[0]
                         : "",
-                    alergias: ficha.paciente.alergias,
+                    alergias: ficha.paciente?.alergias,
                     medicamentos: "",
                     operaciones: ficha.paciente?.operaciones || "",
                     antecedentesAdicionales: ficha.paciente?.antecedentesAdicionales || "",
@@ -167,7 +168,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                     genero: string;
                     tipo: string;
                 }) => ({
-                    partoId: p.partoId,  // ✅ CRÍTICO: Preservar el ID del parto
+                    partoId: p.partoId,  // CRÍTICO: Preservar el ID del parto
                     pacienteId: undefined,  // No necesario en formulario
                     fecha: p.fecha ? new Date(p.fecha).toISOString().split('T')[0] : "",
                     genero: p.genero || "",
@@ -183,21 +184,21 @@ export default function Ficha({ pacienteId, fichaId }: {
                     habitoAlimenticio: ficha.higiene?.habitoAlimenticio || ""
                 }
             };
-            
-            reset(formData);            
-            
+
+            reset(formData);
+
             if (ficha.paciente?.alergias === null) {
                 setShowAlertaAlergias(true);
             }
         }
-    }, [ficha, formMethods.reset]);
+    }, [ficha, reset]);
 
-    const esMedico = useCallback(() => {        
+    const esMedico = useCallback(() => {
         const profesional = ficha?.profesional;
         if (!profesional || !profesional.especialidades || !profesional.especialidades.length) {
             return false;
         }
-        return profesional.especialidades.some((esp: { nombre: string }) => {            
+        return profesional.especialidades.some((esp: { nombre: string }) => {
             return esp.nombre === 'Medicina';
         });
     }, [ficha?.profesional]);
@@ -205,7 +206,7 @@ export default function Ficha({ pacienteId, fichaId }: {
     // Función para determinar qué tabs mostrar según especialidad
     const getTabsSegunEspecialidad = useCallback(() => {
         return esMedico() ? TABS_MEDICO : TABS_OTROS;
-    }, [esMedico]);    
+    }, [esMedico]);
 
     // Cambiar a primer tab disponible si el actual no está permitido
     useEffect(() => {
@@ -244,7 +245,7 @@ export default function Ficha({ pacienteId, fichaId }: {
     });
 
     const handleTerminarAtencion = async () => {
-        if(pacienteId) {
+        if (pacienteId) {
             setShowModalSalir(true);
             return;
         }
@@ -252,15 +253,20 @@ export default function Ficha({ pacienteId, fichaId }: {
     }
 
     const handleRegistrarTerminoAtencion = async () => {
-        mutationTerminarAtencion.mutate();        
+        mutationTerminarAtencion.mutate();
     }
 
-    return (<AutoSaveProvider 
-        fichaId={ficha?.id} 
+    const tabsActuales = getTabsSegunEspecialidad();
+    const tabsMobileSuperiores = tabsActuales.slice(3);
+    const tabsMobileInferiores = tabsActuales.slice(0, 3);
+
+    return (<AutoSaveProvider
+        fichaId={ficha?.id}
         pacienteId={pacienteId || undefined}
         formMethods={formMethods}
     >
-        <div className="relative p-1 md:p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-screen">
+        {/* 100dvh: respeta la barra del navegador móvil (100vh la ignora) */}
+        <div className="relative p-1 md:p-2 bg-gradient-to-br from-[#A78D60] via-[#EFC974] to-[#A48A60] h-[100dvh] overflow-hidden">
             <AutoSaveIndicator />
 
             {/* Loader Ficha Inicial */}
@@ -274,8 +280,8 @@ export default function Ficha({ pacienteId, fichaId }: {
             )}
 
             {!loadingFicha && ficha && <>
-                <EncabezadoFicha 
-                paciente={ficha.paciente} 
+                <EncabezadoFicha
+                paciente={ficha.paciente}
                 profesional={{
                     id: ficha?.profesional?.id || "",
                     nombre: ficha?.profesional?.nombre || "",
@@ -286,14 +292,11 @@ export default function Ficha({ pacienteId, fichaId }: {
                 }}
                 register={register} />
 
-                <div className="flex flex-col md:flex-row h-[calc(100vh-166px)] relative">
+                {/* En desktop se resta 1rem extra para dejar margen inferior a la ficha */}
+                <div className="flex flex-col md:flex-row h-[calc(100dvh-166px)] md:h-[calc(100dvh-192px)] relative overflow-y-hidden">
                 {/* Contenido (izquierda) - Conectado con tab activo */}
-                <div className="flex-1 order-2 md:order-1 bg-[#f6eedb] shadow border border-r-0 border-[#d5c7aa] overflow-y-auto relative z-10"
-                    style={{
-                        borderTopLeftRadius: '0.75rem',
-                        borderBottomLeftRadius: '0.75rem'
-                    }}>
-                    <div className="p-6">
+<div className="flex-1 min-h-0 order-2 md:order-1 bg-[#f6eedb] shadow border border-[#d5c7aa] md:border-r-0 rounded-b-xl md:rounded-b-none md:rounded-l-xl overflow-y-auto overscroll-contain relative z-10">
+    <div className="p-6 pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-24">
                         {tab === "personal" && <InformacionPersonal
                                 register={register}
                                 setValue={setValue}
@@ -302,7 +305,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 esMedico={esMedico()}
                                 alertaAlergias={ficha?.paciente?.alergias === null} />}
 
-                        {tab === "motivo" && <MotivoConsulta 
+                        {tab === "motivo" && <MotivoConsulta
                             register={register} />}
 
                         {tab === "anamnesis" && <Anamnesis
@@ -326,14 +329,14 @@ export default function Ficha({ pacienteId, fichaId }: {
                 </div>
 
                 {/* Lengüetas verticales tipo carpeta (derecha) */}
-                <div className="relative bg-transparent h-auto md:h-full order-1 md:order-2 md:-ml-0.5 z-20 w-full md:w-auto md:max-w-[220px] px-2 md:px-0">
-                    
+                <div className="relative bg-transparent shrink-0 h-auto md:h-[calc(100dvh-192px)] order-1 md:order-2 md:-ml-0.5 z-20 w-full md:w-auto md:max-w-[220px] md:px-0">
+
                     {/* Mobile: Tabs en orden invertido - arriba los últimos, abajo los primeros */}
                     <div className="md:hidden flex flex-col">
                         {/* Segunda mitad de tabs - van ARRIBA */}
-                        {getTabsSegunEspecialidad().length > 3 && (
+                        {tabsMobileSuperiores.length > 0 && (
                             <div className="flex flex-row -space-x-1 -mb-1">
-                                {getTabsSegunEspecialidad().slice(3).map((t, index) => {
+                                {tabsMobileSuperiores.map((t, index) => {
                                     const isActive = tab === t.key;
                                     return (
                                         <button
@@ -362,10 +365,10 @@ export default function Ficha({ pacienteId, fichaId }: {
                                 })}
                             </div>
                         )}
-                        
+
                         {/* Primera mitad de tabs - van ABAJO, conectando al contenido */}
                         <div className="flex flex-row -space-x-1">
-                            {getTabsSegunEspecialidad().slice(0, 3).map((t, index) => {
+                            {tabsMobileInferiores.map((t, index) => {
                                 const isActive = tab === t.key;
                                 return (
                                     <button
@@ -396,44 +399,49 @@ export default function Ficha({ pacienteId, fichaId }: {
                         </div>
                     </div>
 
-                    {/* Desktop: Layout vertical original sin cambios */}
-                    <div className="hidden md:block">
-                        {getTabsSegunEspecialidad().map((t, index) => {
-                            const isActive = tab === t.key;
-                            const isLast = index === getTabsSegunEspecialidad().length - 1;
-                            const isFirst = index === 0;
-                            return (
-                                <button
-                                    key={t.key}
-                                    className={`
-                                        ${isLast ? 'md:h-full' : 'md:h-32'} h-auto ${isFirst ? 'md:mt-0' : '-ml-3 md:-mt-3 md:ml-0'} 
-                                        md:block items-center relative px-4 pt-6 text-md font-semibold w-full min-w-[200px]
-                                        border border-[#d5c7aa] md:border-l-0 rounded-tr-lg 
-                                        ${isLast && 'md:rounded-br-lg'} 
-                                        ${isActive
-                                            ? "text-[#68563c] bg-[#f6eedb] md:border-l-0 z-30 shadow-sm"
-                                            : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white md:border-l-2 md:border-l-[#d5c7aa] hover:md:border-l-[#ac9164] cursor-pointer z-10"
-                                        }
-                                        text-left transition-all duration-200 whitespace-nowrap
-                                    `}
-                                    style={{
-                                        borderBottomLeftRadius: '0'
-                                    }}
-                                    onClick={() => setTab(t.key)}
-                                    type="button"
-                                    tabIndex={isActive ? 0 : -1}
-                                >
-                                    <p className="h-full flex flex-col items-start">{t.label}</p>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    {/* Desktop: pestañas verticales. Todas miden lo mismo (ya no hay flex-1
+                        en la última) y, si la pantalla es baja, el contenedor hace scroll. */}
+                        <div className="hidden md:flex md:flex-col md:h-full md:overflow-y-auto overflow-x-hidden">
+                            {tabsActuales.map((t, index) => {
+                                const isActive = tab === t.key;
+                                const isLast = index === tabsActuales.length - 1;
+                                const isFirst = index === 0;
+                                return (
+                                    <button
+                                        key={t.key}
+                                        className={`
+                    /* Distribución proporcional en alto y comportamiento flex */
+                    md:flex-1 h-auto ${isFirst ? 'md:mt-0' : '-ml-3 md:-mt-3 md:ml-0'}
+                    md:flex items-center relative px-4 text-md font-semibold w-full min-w-[200px]
+                    border border-[#d5c7aa] md:border-l-0 rounded-tr-lg
+                    ${isLast ? 'md:rounded-br-lg' : ''}
+                    ${isActive
+                                                ? "text-[#68563c] bg-[#f6eedb] md:border-l-0 z-30 shadow-sm"
+                                                : "text-[#8e9b6d] bg-white hover:bg-[#ac9164] hover:text-white md:border-l-2 md:border-l-[#d5c7aa] hover:md:border-l-[#ac9164] cursor-pointer z-10"
+                                            }
+                    text-left transition-all duration-200 whitespace-nowrap
+                `}
+                                        style={{
+                                            borderBottomLeftRadius: '0'
+                                        }}
+                                        onClick={() => setTab(t.key)}
+                                        type="button"
+                                        tabIndex={isActive ? 0 : -1}
+                                    >
+                                        {/* Centrado vertical del texto dentro del botón gracias a flex */}
+                                        <p className="w-full text-left">{t.label}</p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                 </div>
             </div>
 
             </>}
 
-            <div className="fixed bottom-2 right-2 md:bottom-6 md:right-6 z-50">
+            {/* Botón flotante: sube en móvil y respeta el área segura de iOS */}
+            <div className="fixed bottom-4 right-3 md:bottom-6 md:right-6 z-50 mb-[env(safe-area-inset-bottom)]">
                 {/* Tooltip */}
                 {showTooltip && (
                     <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap">
@@ -447,8 +455,9 @@ export default function Ficha({ pacienteId, fichaId }: {
                     onMouseEnter={() => setShowTooltip(true)}
                     onMouseLeave={() => setShowTooltip(false)}
                     onClick={() => handleTerminarAtencion()}
+                    aria-label="Finalizar sesión"
+                    type="button"
                 >
-                    {/* SVG CiPower logo (placeholder) */}
                     <CiPower className="text-3xl text-[#68563c]" />
                 </button>
             </div>
@@ -458,7 +467,7 @@ export default function Ficha({ pacienteId, fichaId }: {
                 onClose={() => setShowModalSalir(false)}
                 terminarAtencion={handleRegistrarTerminoAtencion}
             />
-            
+
             <ModalAlertaAlergias
                 isOpen={showAlertaAlergias}
                 onClose={() => setShowAlertaAlergias(false)}

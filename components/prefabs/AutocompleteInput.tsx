@@ -8,6 +8,7 @@ interface AutocompleteItem {
 interface AutocompleteInputProps {
     items: AutocompleteItem[];
     onSelect: (item: AutocompleteItem) => void;
+    onCreateNew?: (nombre: string) => void;
     placeholder?: string;
     className?: string;
 }
@@ -15,6 +16,7 @@ interface AutocompleteInputProps {
 export default function AutocompleteInput({ 
     items = [], 
     onSelect, 
+    onCreateNew,
     placeholder = "Escribir para buscar...",
     className = ""
 }: AutocompleteInputProps) {
@@ -24,6 +26,17 @@ export default function AutocompleteInput({
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Capitalizar primera letra al escribir
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        if (raw.length > 0) {
+            const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
+            setInputValue(capitalized);
+        } else {
+            setInputValue("");
+        }
+    };
 
     useEffect(() => {
         if (inputValue.trim() === "") {
@@ -39,10 +52,6 @@ export default function AutocompleteInput({
         setShowDropdown(filtered.length > 0);
         setSelectedIndex(-1);
     }, [inputValue, items]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setInputValue(e.target.value);
-    };
 
     const handleSelect = (item: AutocompleteItem) => {
         onSelect(item);
@@ -66,6 +75,12 @@ export default function AutocompleteInput({
                 handleSelect(filteredItems[selectedIndex]);
             } else if (filteredItems.length === 1) {
                 handleSelect(filteredItems[0]);
+            } else if (onCreateNew && inputValue.trim() !== "") {
+                // No existe en el listado: crear nuevo elemento
+                onCreateNew(inputValue.trim());
+                setInputValue("");
+                setShowDropdown(false);
+                setSelectedIndex(-1);
             }
         } else if (e.key === "Escape") {
             setShowDropdown(false);
@@ -77,6 +92,11 @@ export default function AutocompleteInput({
         if (filteredItems.length > 0) {
             const itemToSelect = selectedIndex >= 0 ? filteredItems[selectedIndex] : filteredItems[0];
             handleSelect(itemToSelect);
+        } else if (onCreateNew && inputValue.trim() !== "") {
+            onCreateNew(inputValue.trim());
+            setInputValue("");
+            setShowDropdown(false);
+            setSelectedIndex(-1);
         }
     };
 
@@ -108,10 +128,10 @@ export default function AutocompleteInput({
                 <button
                     type="button"
                     onClick={handleAgregarClick}
-                    disabled={filteredItems.length === 0}
+                    disabled={!(filteredItems.length > 0 || (onCreateNew && inputValue.trim() !== ""))}
                     className="bg-[#66754c] text-white px-3 py-2 rounded text-sm hover:bg-[#8e9b6d] disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                    Agregar
+                    {filteredItems.length > 0 ? "Agregar" : "Crear nuevo"}
                 </button>
             </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createPortal } from "react-dom"
+import { formatRut } from "@/app/utils/rutFormatter";
 
 export interface IPacienteSearchResult {
   id: string;
@@ -14,12 +15,14 @@ interface AutocompleteClientSearchInputProps {
   className?: string;
   placeholder?: string;
   onSelected?: (paciente: IPacienteSearchResult) => void;
+  onCreateNew?: (rut: string) => void;
 }
 
 export const AutocompleteClientSearchInput = ({
   className = "",
   placeholder = "Buscar paciente...",
   onSelected,
+  onCreateNew,
 }: AutocompleteClientSearchInputProps) => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -61,7 +64,15 @@ export const AutocompleteClientSearchInput = ({
   // Debounce
   useEffect(() => {
     const timeout = setTimeout(() => {
-      setDebouncedSearch(search);
+      let valueToSearch = search;
+
+      // Si los primeros 7 caracteres son solo números, formatear como RUT
+      // antes de buscar: 12973705-0 → 12.973.705-0, 8501126k → 8.501.126-K
+      if (valueToSearch.length >= 7 && /^\d{7}/.test(valueToSearch)) {
+        valueToSearch = formatRut(valueToSearch);
+      }
+
+      setDebouncedSearch(valueToSearch);
     }, 800);
 
     return () => clearTimeout(timeout);
@@ -71,7 +82,7 @@ export const AutocompleteClientSearchInput = ({
   const { data, isFetching } = useQuery({
     queryKey: ["pacientes-search", debouncedSearch],
     enabled: debouncedSearch.trim().length >= 4,
-    queryFn: async (): Promise<IPacienteSearchResult[]> => {
+    queryFn: async (): Promise<IPacienteSearchResult[]> => {      
       const response = await fetch(
         `/api/paciente/search?search=${encodeURIComponent(
           debouncedSearch
@@ -143,7 +154,20 @@ export const AutocompleteClientSearchInput = ({
               </div>
             )}
 
-            {!isFetching && resultados.length === 0 && (
+            {!isFetching && resultados.length === 0 && onCreateNew && (
+              <button
+                type="button"
+                onClick={() => {
+                  onCreateNew(debouncedSearch.trim());
+                  setOpen(false);
+                }}
+                className="w-full px-4 py-3 text-sm text-[#66754c] font-semibold hover:bg-[#fad379]/20 rounded-lg transition"
+              >
+                Crear nuevo paciente
+              </button>
+            )}
+
+            {!isFetching && resultados.length === 0 && !onCreateNew && (
               <div className="px-4 py-3 text-sm text-slate-500">
                 Sin resultados
               </div>

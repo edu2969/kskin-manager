@@ -150,7 +150,7 @@ export default function InformacionPersonal({
                 autoSaveAsNumber={true}
                 isLoading={isLoading} />            
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-8 md:mb-10">
             <div>
                 <label className="block text-sm font-semibold text-[#68563c] mb-1">
                     Email

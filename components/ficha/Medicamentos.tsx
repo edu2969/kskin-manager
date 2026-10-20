@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Control, UseFormRegister, useFieldArray } from "react-hook-form";
 import { FaRegTrashCan } from "react-icons/fa6";
@@ -29,6 +30,8 @@ export default function Medicamentos({
         }
     });
 
+    const [medicamentosCreados, setMedicamentosCreados] = useState<{ id: string; nombre: string }[]>([]);
+
     const handleAutoSave = (fieldName: string, value: string) => {
         saveField(fieldName, value);
     };
@@ -51,6 +54,43 @@ export default function Medicamentos({
         handleAutoSave(`ficha.medicamento.${relacionId}.medicamento_id`, medicamentoId);
     };
 
+    const handleCrearMedicamentoNuevo = async (nombre: string) => {
+        try {
+            const response = await fetch("/api/medicamentos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error("[Medicamentos] Error creando medicamento:", errorData);
+                return;
+            }
+
+            const data = await response.json();
+            const medicamentoId = String(data.id);
+
+            const yaExiste = fields.some((field) => String(field.medicamentoId) === medicamentoId);
+            if (yaExiste) {
+                return;
+            }
+
+            setMedicamentosCreados((prev) => [...prev, { id: medicamentoId, nombre }]);
+
+            const relacionId = `new_${Date.now()}`;
+            const nuevoMedicamento: IMedicamentoForm = {
+                relacionId,
+                medicamentoId
+            };
+
+            append(nuevoMedicamento);
+            handleAutoSave(`ficha.medicamento.${relacionId}.medicamento_id`, medicamentoId);
+        } catch (error) {
+            console.error("[Medicamentos] Error creando medicamento:", error);
+        }
+    };
+
     const handleRemoverMedicamento = (index: number) => {
         const field = fields[index];
         if (field?.medicamentoId) {
@@ -59,14 +99,20 @@ export default function Medicamentos({
         remove(index);
     };
 
-    const autocompleteItems = (medicamentos || []).map((medicamento: { id: string; nombre: string }) => ({
-        key: medicamento.id,
-        value: medicamento.nombre
-    }));
+    const autocompleteItems = [
+        ...(medicamentos || []).map((medicamento: { id: string; nombre: string }) => ({
+            key: medicamento.id,
+            value: medicamento.nombre
+        })),
+        ...medicamentosCreados.map((medicamento) => ({
+            key: medicamento.id,
+            value: medicamento.nombre
+        }))
+    ];
 
     const getMedicamentoNombre = (medicamentoId: string) => {
-        const medicamento = (medicamentos || []).find((item: { id: string }) => item.id === medicamentoId);
-        return medicamento?.nombre || `Medicamento ID: ${medicamentoId}`;
+        const medicamento = autocompleteItems.find((item) => String(item.key) === medicamentoId);
+        return medicamento?.value || medicamentoId;
     };
 
     return <div className="bg-white rounded-lg p-4 border border-[#d5c7aa]">
@@ -81,6 +127,7 @@ export default function Medicamentos({
                 <AutocompleteInput
                     items={autocompleteItems}
                     onSelect={handleAgregarMedicamento}
+                    onCreateNew={handleCrearMedicamentoNuevo}
                     placeholder="Buscar y seleccionar medicamento..."
                 />
 

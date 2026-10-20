@@ -43,7 +43,7 @@ export default function Higiene({
                 Higiene
             </summary>
             <div className="mt-4 space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-6">
                     <div className="flex items-center col-span-2">
                         <input
                             type="checkbox"
