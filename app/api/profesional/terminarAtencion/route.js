@@ -46,11 +46,12 @@ export async function POST() {
         const manana = new Date(hoy);
         manana.setDate(hoy.getDate() + 1);
 
+        console.log("[terminarAtencion] Buscando ficha activa para profesional:", profesional.id);
+
         const { data: ficha, error: fichaError } = await supabase
             .from("fichas")
             .select("id, paciente_id, created_at")
             .eq("profesional_id", profesional.id)
-            .is("finished_at", null)
             .order("created_at", { ascending: false })
             .limit(1)
             .single();
@@ -62,7 +63,7 @@ export async function POST() {
 
         console.log("[terminarAtencion] Ficha encontrada:", ficha.id);
 
-        const fechaTermino = new Date().toISOString();
+        const fechaTermino = new Date();
         const duracionMinutos = Math.ceil((new Date(fechaTermino) - new Date(ficha.created_at)) / 60000);
 
         // 1. Actualizar arribo con fecha de termino
@@ -78,11 +79,13 @@ export async function POST() {
             console.log("[terminarAtencion] Arribo actualizado para paciente:", ficha.paciente_id);
         }
 
+        console.log("[terminarAtencion] Actualizando ficha con ID", ficha.id, "a estado FINALIZADA con duración de", duracionMinutos, "minutos");
+
         // 2. Actualizar ficha con estado FINALIZADA
         const { error: fichaUpdateError } = await supabase
             .from("fichas")
             .update({
-                finished_at: fechaTermino
+                finished_at: fechaTermino.toISOString()
             })
             .eq("id", ficha.id);
 
@@ -90,23 +93,49 @@ export async function POST() {
             console.error("[terminarAtencion] Error actualizando ficha:", fichaUpdateError.message);
             return NextResponse.json({ error: "Error actualizando ficha" }, { status: 500 });
         }
-        console.log("[terminarAtencion] Ficha actualizada como TERMINADA:", ficha.id);
+        console.log("[terminarAtencion] Ficha actualizada como TERMINADA:", profesional.id, ficha.paciente_id);
 
         // 3. Finalizar atención en box y liberar
         const { data: boxUpdate, error: boxError } = await supabase
             .from("boxes")
             .update({
-                termino_atencion: fechaTermino,
+                termino_atencion: fechaTermino.toISOString(),
                 paciente_id: null,
                 profesional_id: null
             })
             .eq("paciente_id", ficha.paciente_id)
-            .eq("profesional_id", profesional.id);
+            .eq("profesional_id", profesional.id)
+            .select("id");
 
-        if (!boxUpdate || boxError) {
-            console.warn("[terminarAtencion] Error liberando box:", boxError);
+        if (boxError) {
+            console.error("[terminarAtencion] Error liberando box:", boxError.message);
+        } else if (!boxUpdate || boxUpdate.length === 0) {
+            console.warn(
+                "[terminarAtencion] 0 boxes actualizados. Revisar RLS o filtros:",
+                { paciente_id: ficha.paciente_id, profesional_id: profesional.id }
+            );
         } else {
-            console.log("[terminarAtencion] Box liberado para paciente:", ficha.paciente_id);
+            console.log("[terminarAtencion] Box liberado:", boxUpdate);
+        }
+
+        const { data: arriboUpdate, error: arriboUpdateError } = await supabase
+            .from("arribos")
+            .update({
+                fecha_termino: fechaTermino.toISOString()
+            })
+            .eq("paciente_id", ficha.paciente_id)
+            .is("fecha_termino", null)
+            .select("id");
+
+        if (arriboUpdateError) {
+            console.error("[terminarAtencion] Error actualizando arribo:", arriboUpdateError.message);
+        } else if (!arriboUpdate || arriboUpdate.length === 0) {
+            console.warn(
+                "[terminarAtencion] 0 arribos actualizados. Revisar RLS o filtros:",
+                { paciente_id: ficha.paciente_id }
+            );
+        } else {
+            console.log("[terminarAtencion] Arribo actualizado:", arriboUpdate);
         }
 
         return NextResponse.json({ ok: true, message: "Atención terminada correctamente" });
